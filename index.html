@@ -8,10 +8,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <!-- Google Fonts: Shippori Mincho & Zen Kaku Gothic -->
+  <!-- Google Fonts: Zen Maru Gothic & Kiwi Maru (柔らかく優しいフォント) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <!-- PeerJS for WebRTC Realtime Sync -->
@@ -22,8 +22,8 @@
       theme: {
         extend: {
           fontFamily: {
-            serif: ['"Shippori Mincho"', 'serif'],
-            sans: ['"Zen Kaku Gothic New"', 'sans-serif'],
+            serif: ['"Kiwi Maru"', '"Zen Maru Gothic"', 'serif'],
+            sans: ['"Zen Maru Gothic"', 'sans-serif'],
           },
           colors: {
             bungaku: {
@@ -469,13 +469,22 @@
                 <div class="status-bar-transition bg-gradient-to-r from-indigo-500 to-blue-500 h-full rounded-full" style="width: ${literaPercent}%"></div>
               </div>
 
-              <!-- クイック加算ボタン -->
-              <div class="grid grid-cols-5 gap-1 pt-0.5">
-                ${[10, 20, 30, 40, 50].map(val => `
-                  <button onclick="addPoint(${pIdx}, 'litera', ${val})" class="py-1 px-1 text-xs font-bold bg-white text-indigo-700 hover:bg-indigo-600 hover:text-white border border-indigo-200 rounded-md shadow-2xs transition">
-                    +${val}
-                  </button>
-                `).join('')}
+              <!-- クイック増減ボタン (加算 & 減算) -->
+              <div class="space-y-1 pt-0.5">
+                <div class="grid grid-cols-5 gap-1">
+                  ${[10, 20, 30, 40, 50].map(val => `
+                    <button onclick="addPoint(${pIdx}, 'litera', ${val})" class="py-1 px-0.5 text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 rounded-md shadow-2xs transition active:scale-95">
+                      +${val}
+                    </button>
+                  `).join('')}
+                </div>
+                <div class="grid grid-cols-5 gap-1">
+                  ${[10, 20, 30, 40, 50].map(val => `
+                    <button onclick="addPoint(${pIdx}, 'litera', -${val})" class="py-0.5 px-0.5 text-[11px] font-bold bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200 rounded-md shadow-2xs transition active:scale-95">
+                      -${val}
+                    </button>
+                  `).join('')}
+                </div>
               </div>
             </div>
 
@@ -499,13 +508,22 @@
                 <div class="status-bar-transition bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full" style="width: ${manabiPercent}%"></div>
               </div>
 
-              <!-- クイック加算ボタン -->
-              <div class="grid grid-cols-5 gap-1 pt-0.5">
-                ${[10, 20, 30, 40, 50].map(val => `
-                  <button onclick="addPoint(${pIdx}, 'manabi', ${val})" class="py-1 px-1 text-xs font-bold bg-white text-emerald-700 hover:bg-emerald-600 hover:text-white border border-emerald-200 rounded-md shadow-2xs transition">
-                    +${val}
-                  </button>
-                `).join('')}
+              <!-- クイック増減ボタン (加算 & 減算) -->
+              <div class="space-y-1 pt-0.5">
+                <div class="grid grid-cols-5 gap-1">
+                  ${[10, 20, 30, 40, 50].map(val => `
+                    <button onclick="addPoint(${pIdx}, 'manabi', ${val})" class="py-1 px-0.5 text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 rounded-md shadow-2xs transition active:scale-95">
+                      +${val}
+                    </button>
+                  `).join('')}
+                </div>
+                <div class="grid grid-cols-5 gap-1">
+                  ${[10, 20, 30, 40, 50].map(val => `
+                    <button onclick="addPoint(${pIdx}, 'manabi', -${val})" class="py-0.5 px-0.5 text-[11px] font-bold bg-white text-emerald-700 hover:bg-emerald-50 border border-emerald-200 rounded-md shadow-2xs transition active:scale-95">
+                      -${val}
+                    </button>
+                  `).join('')}
+                </div>
               </div>
             </div>
 
