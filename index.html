@@ -401,6 +401,14 @@
       const container = document.getElementById('splitView');
       container.innerHTML = '';
 
+      // 最大ポイントに応じてゲージの基準値を自動調整 (最低300pt)
+      let currentMax = 300;
+      gameState.players.forEach(p => {
+        if (p.litera > currentMax) currentMax = p.litera;
+        if (p.manabi > currentMax) currentMax = p.manabi;
+      });
+      gameState.maxGauge = Math.ceil(currentMax / 50) * 50;
+
       gameState.players.forEach((player, pIdx) => {
         const theme = PLAYER_THEMES[player.colorKey || (pIdx + 1)];
         const cardCount = (player.cards || []).length;
@@ -410,7 +418,12 @@
         const manabiPercent = Math.min(Math.max((player.manabi / gameState.maxGauge) * 100, 0), 100);
 
         const cardEl = document.createElement('div');
-        cardEl.className = `bg-white rounded-2xl border-2 ${theme.border} shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden`;
+        cardEl.className = `bg-white rounded-2xl border-2 ${theme.border} shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden cursor-pointer`;
+        cardEl.onclick = (e) => {
+          // ボタンや入力要素がクリックされた場合は拡大を開かない
+          if (e.target.closest('button') || e.target.closest('input')) return;
+          openFocusView(pIdx);
+        };
         
         cardEl.innerHTML = `
           <!-- プレイヤー枠ヘッダー -->
