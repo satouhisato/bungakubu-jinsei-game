@@ -83,6 +83,11 @@
         </h1>
       </div>
 
+      <!-- 中央：現在のランキングサマリーバー -->
+      <div id="headerRankingBar" class="hidden xl:flex items-center gap-2 text-xs font-bold bg-slate-100/90 px-3 py-1 rounded-full border border-slate-200">
+        <!-- JSで順位一覧が挿入されます -->
+      </div>
+
       <!-- ヘッダー右側ボタン群 -->
       <div class="flex items-center gap-1.5 sm:gap-2">
         <!-- キーボード操作ガイドバッジ -->
@@ -218,14 +223,8 @@
     </div>
 
     <!-- プレイヤー切り替えタブ -->
-    <div class="grid grid-cols-4 gap-1.5 my-3">
-      ${[0, 1, 2, 3].map(idx => `
-        <button onclick="selectMasterPlayer(${idx})" id="masterTab${idx}" 
-          class="py-2 px-1 text-center font-bold text-xs rounded-xl border transition flex flex-col items-center">
-          <span class="text-[10px] opacity-75">P${idx+1}</span>
-          <span class="truncate w-full text-center" id="masterTabName${idx}">プレイヤー${idx+1}</span>
-        </button>
-      `).join('')}
+    <div id="masterTabsContainer" class="grid grid-cols-4 gap-1.5 my-3">
+      <!-- JSで動的にボタン生成 -->
     </div>
 
     <!-- 選択中プレイヤーのポイント表示部 -->
@@ -245,13 +244,8 @@
       </div>
 
       <!-- 10〜100ボタン (2行×5列) -->
-      <div class="grid grid-cols-5 gap-1.5">
-        ${[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map(val => `
-          <button onclick="executeMasterPointChange(${val})" id="masterBtn${val}" 
-            class="py-2.5 px-1 font-black text-sm rounded-xl shadow-xs transition active:scale-95 bg-indigo-600 hover:bg-indigo-500 text-white">
-            +${val}
-          </button>
-        `).join('')}
+      <div id="masterButtonsGrid" class="grid grid-cols-5 gap-1.5">
+        <!-- JSで動的に生成 -->
       </div>
     </div>
 
@@ -599,6 +593,34 @@
     }
 
     // ==========================================
+    // 順位（ランキング）計算ロジック
+    // ==========================================
+    function calculatePlayerRanks() {
+      const sorted = [...gameState.players].sort((a, b) => b.litera - a.litera);
+      const ranks = {};
+      let currentRank = 1;
+      for (let i = 0; i < sorted.length; i++) {
+        if (i > 0 && sorted[i].litera < sorted[i - 1].litera) {
+          currentRank = i + 1;
+        }
+        ranks[sorted[i].id] = currentRank;
+      }
+      return { ranks, sorted };
+    }
+
+    function getRankBadgeHtml(rank) {
+      if (rank === 1) {
+        return `<span class="px-2 py-0.5 text-[11px] font-black rounded-full bg-amber-400 text-amber-950 border border-amber-300 shadow-2xs flex items-center gap-1 shrink-0"><i class="fa-solid fa-crown text-[10px]"></i>1位</span>`;
+      } else if (rank === 2) {
+        return `<span class="px-2 py-0.5 text-[11px] font-black rounded-full bg-slate-200 text-slate-800 border border-slate-300 shadow-2xs flex items-center gap-1 shrink-0"><i class="fa-solid fa-medal text-[10px]"></i>2位</span>`;
+      } else if (rank === 3) {
+        return `<span class="px-2 py-0.5 text-[11px] font-black rounded-full bg-amber-700/30 text-amber-100 border border-amber-600/40 shadow-2xs flex items-center gap-1 shrink-0"><i class="fa-solid fa-award text-[10px]"></i>3位</span>`;
+      } else {
+        return `<span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-white/20 text-white shrink-0">4位</span>`;
+      }
+    }
+
+    // ==========================================
     // 【ビュー1】PCメイン画面: 4分割グリッド
     // ==========================================
     function renderSplitGrid() {
@@ -611,6 +633,20 @@
       const container = document.getElementById('splitGrid');
       container.innerHTML = '';
 
+      const rankData = calculatePlayerRanks();
+
+      // ヘッダーのランキングサマリーバー更新
+      const headerRankingBar = document.getElementById('headerRankingBar');
+      if (headerRankingBar) {
+        headerRankingBar.innerHTML = rankData.sorted.map((p, idx) => {
+          const rank = rankData.ranks[p.id];
+          const badge = (rank === 1) ? '🥇 1位' : (rank === 2) ? '🥈 2位' : (rank === 3) ? '🥉 3位' : '4位';
+          return `<span class="flex items-center gap-1 ${rank === 1 ? 'text-amber-800 font-black' : 'text-slate-600'}">
+            <span>${badge}</span> <span>${escapeHtml(p.name)}</span> <span class="opacity-75">(${p.litera}pt)</span>
+          </span>`;
+        }).join('<span class="text-slate-300">|</span>');
+      }
+
       const VALUES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
       gameState.players.forEach((player, pIdx) => {
@@ -619,6 +655,8 @@
         const percent = Math.min(Math.max((player.litera / gameState.maxGauge) * 100, 0), 100);
         const isSelected = (keyboardSelectedPlayerIdx === pIdx);
         const opMode = splitOpModes[pIdx] || 'add';
+        const rank = rankData.ranks[player.id];
+        const rankBadge = getRankBadgeHtml(rank);
 
         const cardEl = document.createElement('div');
         cardEl.className = `bg-white rounded-xl sm:rounded-2xl border-2 ${theme.border} shadow-xs hover:shadow-md transition-all flex flex-col overflow-hidden relative ${
@@ -632,9 +670,11 @@
         };
 
         cardEl.innerHTML = `
-          <!-- 枠ヘッダー（プレイヤー名 ＆ アクション） -->
+          <!-- 枠ヘッダー（順位バッジ ＆ プレイヤー名 ＆ アクション） -->
           <div class="${theme.headerBg} text-white px-3 py-1.5 flex items-center justify-between shrink-0">
             <div class="flex items-center gap-1.5 flex-1 mr-2 overflow-hidden">
+              <!-- 順位バッジ -->
+              ${rankBadge}
               <span class="w-5 h-5 rounded-full bg-white/20 text-white font-bold text-[11px] flex items-center justify-center shrink-0">P${player.id}</span>
               <input type="text" value="${escapeHtml(player.name)}" onchange="updatePlayerName(${pIdx}, this.value)"
                 class="bg-transparent text-white font-bold text-sm sm:text-base focus:bg-white/20 px-1.5 py-0.2 rounded outline-none border-b border-transparent focus:border-white w-full truncate" title="名前を変更">
@@ -733,9 +773,13 @@
       const percent = Math.min(Math.max((player.litera / gameState.maxGauge) * 100, 0), 100);
       const VALUES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
+      const rankData = calculatePlayerRanks();
+      const rank = rankData.ranks[player.id];
+      const rankBadge = getRankBadgeHtml(rank);
+
       const indicator = document.getElementById('focusPlayerIndicator');
       indicator.className = `font-bold text-sm sm:text-base px-3 py-0.5 rounded-lg ${theme.headerBg} text-white flex items-center gap-2 shadow-xs`;
-      indicator.innerHTML = `<span>P${player.id}</span> <span>${escapeHtml(player.name)}</span>`;
+      indicator.innerHTML = `${rankBadge} <span>P${player.id}</span> <span>${escapeHtml(player.name)}</span>`;
 
       const focusContent = document.getElementById('focusContent');
       focusContent.className = `flex-1 bg-white rounded-2xl p-3 sm:p-5 shadow-sm border-2 ${theme.border} overflow-hidden flex flex-col lg:flex-row gap-4`;
@@ -898,67 +942,78 @@
       const theme = PLAYER_THEMES[player.colorKey || (pIdx + 1)];
       const percent = Math.min(Math.max((player.litera / gameState.maxGauge) * 100, 0), 100);
 
-      // タブの更新
-      gameState.players.forEach((p, idx) => {
-        const tab = document.getElementById(`masterTab${idx}`);
-        const nameEl = document.getElementById(`masterTabName${idx}`);
-        if (tab && nameEl) {
-          nameEl.innerText = p.name;
-          if (idx === masterSelectedIdx) {
-            tab.className = 'py-2 px-1 text-center font-bold text-xs rounded-xl border-2 border-amber-400 bg-amber-500/20 text-amber-300 shadow-sm flex flex-col items-center';
-          } else {
-            tab.className = 'py-2 px-1 text-center font-bold text-xs rounded-xl border border-slate-700 bg-slate-800 text-slate-400 flex flex-col items-center';
-          }
-        }
-      });
+      // タブの動的生成
+      const tabsContainer = document.getElementById('masterTabsContainer');
+      if (tabsContainer) {
+        tabsContainer.innerHTML = gameState.players.map((p, idx) => {
+          const isSel = (idx === masterSelectedIdx);
+          const tabClass = isSel 
+            ? 'py-2 px-1 text-center font-bold text-xs rounded-xl border-2 border-amber-400 bg-amber-500/20 text-amber-300 shadow-sm flex flex-col items-center'
+            : 'py-2 px-1 text-center font-bold text-xs rounded-xl border border-slate-700 bg-slate-800 text-slate-400 flex flex-col items-center';
+          return `
+            <button onclick="selectMasterPlayer(${idx})" class="${tabClass}">
+              <span class="text-[10px] opacity-75">P${idx+1}</span>
+              <span class="truncate w-full text-center">${escapeHtml(p.name)}</span>
+            </button>
+          `;
+        }).join('');
+      }
 
       // ポイントボックス
       const box = document.getElementById('masterPlayerBox');
-      box.className = `p-4 rounded-2xl border-2 ${theme.border} bg-slate-800 text-center shadow-lg mb-3`;
-      box.innerHTML = `
-        <div class="flex items-center justify-center gap-2 mb-1">
-          <span class="w-5 h-5 rounded-full ${theme.headerBg} text-white font-bold text-xs flex items-center justify-center">P${player.id}</span>
-          <span class="font-bold text-lg text-white">${escapeHtml(player.name)}</span>
-        </div>
-        <span class="text-xs text-slate-400">現在のりてらポイント</span>
-        <div class="flex items-baseline justify-center gap-1 my-1">
-          <span class="text-5xl sm:text-6xl font-black ${theme.accentText} tracking-tight">
-            ${player.litera}
-          </span>
-          <span class="text-sm font-bold text-slate-400">pt</span>
-        </div>
-        <div class="w-full bg-slate-900 rounded-full h-3 p-0.5 overflow-hidden shadow-inner mt-1">
-          <div class="status-bar-transition bg-gradient-to-r ${theme.barGrad} h-full rounded-full" style="width: ${percent}%"></div>
-        </div>
-      `;
+      if (box) {
+        box.className = `p-4 rounded-2xl border-2 ${theme.border} bg-slate-800 text-center shadow-lg mb-3`;
+        box.innerHTML = `
+          <div class="flex items-center justify-center gap-2 mb-1">
+            <span class="w-5 h-5 rounded-full ${theme.headerBg} text-white font-bold text-xs flex items-center justify-center">P${player.id}</span>
+            <span class="font-bold text-lg text-white">${escapeHtml(player.name)}</span>
+          </div>
+          <span class="text-xs text-slate-400">現在のりてらポイント</span>
+          <div class="flex items-baseline justify-center gap-1 my-1">
+            <span class="text-5xl sm:text-6xl font-black ${theme.accentText} tracking-tight">
+              ${player.litera}
+            </span>
+            <span class="text-sm font-bold text-slate-400">pt</span>
+          </div>
+          <div class="w-full bg-slate-900 rounded-full h-3 p-0.5 overflow-hidden shadow-inner mt-1">
+            <div class="status-bar-transition bg-gradient-to-r ${theme.barGrad} h-full rounded-full" style="width: ${percent}%"></div>
+          </div>
+        `;
+      }
 
       // モード切り替えボタン表示更新
       const addBtn = document.getElementById('masterModeAdd');
       const subBtn = document.getElementById('masterModeSub');
-      if (masterOpMode === 'add') {
-        addBtn.className = 'px-3 py-1 rounded-md bg-indigo-600 text-white font-bold shadow-xs';
-        subBtn.className = 'px-3 py-1 rounded-md text-slate-400 hover:text-white font-bold';
-      } else {
-        addBtn.className = 'px-3 py-1 rounded-md text-slate-400 hover:text-white font-bold';
-        subBtn.className = 'px-3 py-1 rounded-md bg-rose-600 text-white font-bold shadow-xs';
+      if (addBtn && subBtn) {
+        if (masterOpMode === 'add') {
+          addBtn.className = 'px-3 py-1 rounded-md bg-indigo-600 text-white font-bold shadow-xs';
+          subBtn.className = 'px-3 py-1 rounded-md text-slate-400 hover:text-white font-bold';
+        } else {
+          addBtn.className = 'px-3 py-1 rounded-md text-slate-400 hover:text-white font-bold';
+          subBtn.className = 'px-3 py-1 rounded-md bg-rose-600 text-white font-bold shadow-xs';
+        }
       }
 
-      // 10〜100ボタンの色と記号更新
-      const VALUES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-      VALUES.forEach(val => {
-        const btn = document.getElementById(`masterBtn${val}`);
-        if (btn) {
-          const isSub = (masterOpMode === 'sub');
-          btn.innerText = `${isSub ? '-' : '+'}${val}`;
-          btn.className = `py-2.5 px-1 font-black text-sm rounded-xl shadow-xs transition active:scale-95 ${
-            isSub ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-          }`;
-        }
-      });
+      // 10〜100ボタンの動的生成
+      const btnsGrid = document.getElementById('masterButtonsGrid');
+      if (btnsGrid) {
+        const VALUES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+        const isSub = (masterOpMode === 'sub');
+        btnsGrid.innerHTML = VALUES.map(val => `
+          <button onclick="executeMasterPointChange(${val})" 
+            class="py-2.5 px-1 font-black text-sm rounded-xl shadow-xs transition active:scale-95 ${
+              isSub ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+            }">
+            ${isSub ? '-' : '+'}${val}
+          </button>
+        `).join('');
+      }
 
       // カード一覧
       const cardsListEl = document.getElementById('masterCardsList');
-      cardsListEl.innerHTML = renderCardListHtml(player.cards || [], pIdx, true);
+      if (cardsListEl) {
+        cardsListEl.innerHTML = renderCardListHtml(player.cards || [], pIdx, true);
+      }
     }
 
     function selectMasterPlayer(idx) {
