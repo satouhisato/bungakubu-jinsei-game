@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>文学部人生ゲーム - ステータス管理ボード</title>
+  <title>文学部人生ゲーム</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
@@ -12,8 +12,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
-  <!-- Canvas Confetti -->
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <!-- PeerJS for WebRTC Realtime Sync -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
@@ -29,7 +27,6 @@
               bg: '#f6f3ed',
               ink: '#1e293b',
               border: '#e2dcd2',
-              litera: '#4f46e5',
             }
           }
         }
@@ -51,14 +48,6 @@
       background-size: 30px 30px;
       background-position: 0 0, 15px 15px;
     }
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 5px;
-      height: 5px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background-color: #cbd5e1;
-      border-radius: 9999px;
-    }
     .status-bar-transition {
       transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
@@ -71,48 +60,41 @@
        ======================================================== -->
   <div id="mainBoardView" class="h-full flex flex-col overflow-hidden">
     
-    <!-- スリムヘッダー（ノートPCの縦幅を節約） -->
+    <!-- スリムヘッダー -->
     <header class="bg-white/95 backdrop-blur border-b border-bungaku-border px-3 py-1.5 flex items-center justify-between shadow-2xs shrink-0 z-20">
       <div class="flex items-center gap-2">
         <div class="w-7 h-7 rounded-lg bg-amber-900 text-amber-100 flex items-center justify-center font-black text-sm shadow">
           文
         </div>
-        <h1 class="font-bold text-base sm:text-lg text-slate-900 tracking-wide flex items-center gap-2">
-          <span>文学部人生ゲーム</span>
-          <span class="text-[11px] font-medium text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded-full hidden sm:inline">りてらボード</span>
+        <h1 class="font-bold text-base sm:text-lg text-slate-900 tracking-wide">
+          文学部人生ゲーム
         </h1>
       </div>
 
       <!-- 中央：現在のランキングサマリーバー -->
-      <div id="headerRankingBar" class="hidden xl:flex items-center gap-2 text-xs font-bold bg-slate-100/90 px-3 py-1 rounded-full border border-slate-200">
+      <div id="headerRankingBar" class="hidden md:flex items-center gap-2 text-xs font-bold bg-slate-100/90 px-3 py-1 rounded-full border border-slate-200">
         <!-- JSで順位一覧が挿入されます -->
       </div>
 
       <!-- ヘッダー右側ボタン群 -->
       <div class="flex items-center gap-1.5 sm:gap-2">
-        <!-- キーボード操作ガイドバッジ -->
+        <!-- キーボード操作ガイド -->
         <span class="hidden lg:inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
           <i class="fa-solid fa-keyboard text-slate-400"></i>
-          <span>矢印キー: 移動 / Enter: 拡大</span>
+          <span>矢印キー: 選択 / Enter: 拡大</span>
         </span>
 
         <!-- 👑 マスター用QR（スマホ得点操作）ボタン -->
         <button onclick="openMasterQrModal()" class="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-600 text-white hover:bg-amber-700 shadow-2xs transition">
           <i class="fa-solid fa-crown text-amber-200"></i>
-          <span class="hidden sm:inline">マスター用QR</span>
-          <span class="sm:hidden">マスター</span>
+          <span>マスター用QR</span>
         </button>
 
         <!-- 共有ステータスインジケーター -->
         <button onclick="openShareModal()" class="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition">
           <i class="fa-solid fa-share-nodes"></i>
-          <span class="hidden md:inline">全体共有</span>
+          <span class="hidden sm:inline">全体共有</span>
           <span id="syncIndicator" class="inline-block w-2 h-2 rounded-full bg-slate-300 ml-0.5"></span>
-        </button>
-
-        <!-- サウンド切替 -->
-        <button id="soundToggleBtn" onclick="toggleSound()" class="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-slate-200 transition" title="効果音のON/OFF">
-          <i id="soundIcon" class="fa-solid fa-volume-high text-xs"></i>
         </button>
 
         <!-- 全体初期化リセット -->
@@ -123,10 +105,10 @@
     </header>
 
     <!-- メイン表示領域（4分割グリッド または 1人拡大） -->
-    <main class="flex-1 p-2 sm:p-2.5 overflow-hidden flex flex-col">
+    <main class="flex-1 p-2 sm:p-3 overflow-hidden flex flex-col">
       
-      <!-- 4分割グリッド（ノートPCで縦スクロール一切なしで収まる） -->
-      <div id="splitGrid" class="flex-1 grid grid-cols-2 grid-rows-2 gap-2 sm:gap-2.5 h-full">
+      <!-- 4分割グリッド（ノートPCで縦スクロール一切なしで収まる超特大表示） -->
+      <div id="splitGrid" class="flex-1 grid grid-cols-2 grid-rows-2 gap-2 sm:gap-3 h-full">
         <!-- プレイヤー1〜4の枠がJSで生成されます -->
       </div>
 
@@ -143,7 +125,7 @@
             <button onclick="switchFocusPlayer(-1)" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
               <i class="fa-solid fa-chevron-left mr-1"></i> 前へ (←)
             </button>
-            <div id="focusPlayerIndicator" class="font-bold text-sm sm:text-base px-3 py-0.5 rounded-lg text-white">
+            <div id="focusPlayerIndicator" class="font-bold text-sm sm:text-base px-3 py-0.5 rounded-lg text-white flex items-center gap-1.5">
               <!-- プレイヤー名 -->
             </div>
             <button onclick="switchFocusPlayer(1)" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
@@ -152,8 +134,8 @@
           </div>
         </div>
 
-        <!-- 拡大ビュー本体 -->
-        <div id="focusContent" class="flex-1 bg-white rounded-2xl p-4 shadow-sm border-2 overflow-hidden flex flex-col lg:flex-row gap-4">
+        <!-- 拡大ビュー本体（超特大サイネージ） -->
+        <div id="focusContent" class="flex-1 bg-white rounded-2xl p-6 shadow-sm border-2 overflow-hidden flex flex-col items-center justify-center text-center">
           <!-- 拡大コンテンツがJSでレンダリングされます -->
         </div>
       </div>
@@ -164,7 +146,7 @@
   <!-- ========================================================
        【ビュー2: プレイヤー専用 閲覧画面（スマホ用・編集不可）】
        ======================================================== -->
-  <div id="playerViewer" class="hidden h-full w-full flex-col bg-slate-900 text-white overflow-y-auto custom-scrollbar p-4">
+  <div id="playerViewer" class="hidden h-full w-full flex-col bg-slate-900 text-white overflow-y-auto p-4">
     <!-- スマホ閲覧専用ヘッダー -->
     <div class="flex items-center justify-between pb-3 border-b border-slate-700">
       <div class="flex items-center gap-2">
@@ -178,28 +160,17 @@
     </div>
 
     <!-- プレイヤー情報カード -->
-    <div id="playerViewerCard" class="my-4 p-5 rounded-2xl border text-center shadow-lg">
+    <div id="playerViewerCard" class="my-6 p-6 rounded-2xl border text-center shadow-lg">
       <!-- プレイヤー名・ポイント・ゲージがJSで入ります -->
     </div>
 
-    <!-- 獲得カード一覧 -->
-    <div class="flex-1 bg-slate-800/80 rounded-2xl p-4 border border-slate-700">
-      <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-700">
-        <div class="flex items-center gap-2">
-          <i class="fa-solid fa-cards-blank text-amber-400"></i>
-          <h3 class="font-bold text-sm text-slate-100">所持カード一覧</h3>
-        </div>
-        <span id="playerViewerCardCount" class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-700 text-slate-300">0枚</span>
-      </div>
-      <div id="playerViewerCardsList" class="space-y-2">
-        <!-- カードがJSで入ります -->
-      </div>
-    </div>
-
     <!-- 全員の順位サマリー -->
-    <div class="mt-4 p-3 bg-slate-800/50 rounded-xl border border-slate-700">
-      <h4 class="text-xs font-bold text-slate-400 mb-2">現在のランキング</h4>
-      <div id="playerViewerRanking" class="space-y-1.5 text-xs">
+    <div class="p-4 bg-slate-800/80 rounded-2xl border border-slate-700">
+      <h4 class="text-xs font-bold text-slate-400 mb-3 flex items-center gap-1.5">
+        <i class="fa-solid fa-ranking-star text-amber-400"></i>
+        <span>現在のランキング</span>
+      </h4>
+      <div id="playerViewerRanking" class="space-y-2 text-sm">
         <!-- ランキングがJSで入ります -->
       </div>
     </div>
@@ -208,7 +179,7 @@
   <!-- ========================================================
        【ビュー3: マスター専用 得点操作コントローラー（スマホ用）】
        ======================================================== -->
-  <div id="masterController" class="hidden h-full w-full flex-col bg-slate-900 text-white overflow-y-auto custom-scrollbar p-3 sm:p-4">
+  <div id="masterController" class="hidden h-full w-full flex-col bg-slate-900 text-white overflow-y-auto p-3 sm:p-4">
     <!-- マスター用ヘッダー -->
     <div class="flex items-center justify-between pb-2.5 border-b border-slate-700">
       <div class="flex items-center gap-2">
@@ -233,42 +204,25 @@
     </div>
 
     <!-- ポイント増減ボタングリッド (10〜100) -->
-    <div class="bg-slate-800 rounded-2xl p-3.5 border border-slate-700 mb-3">
-      <div class="flex items-center justify-between mb-2">
+    <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700">
+      <div class="flex items-center justify-between mb-3">
         <span class="text-xs font-bold text-slate-300">りてらポイント増減</span>
         <!-- 加算 / 減算 トグルスイッチ -->
         <div class="flex bg-slate-900 p-0.5 rounded-lg border border-slate-700 text-xs font-bold">
-          <button id="masterModeAdd" onclick="setMasterOpMode('add')" class="px-3 py-1 rounded-md bg-indigo-600 text-white transition">＋ 加算</button>
-          <button id="masterModeSub" onclick="setMasterOpMode('sub')" class="px-3 py-1 rounded-md text-slate-400 hover:text-white transition">− 減算</button>
+          <button id="masterModeAdd" onclick="setMasterOpMode('add')" class="px-3.5 py-1.5 rounded-md bg-indigo-600 text-white transition">＋ 加算</button>
+          <button id="masterModeSub" onclick="setMasterOpMode('sub')" class="px-3.5 py-1.5 rounded-md text-slate-400 hover:text-white transition">− 減算</button>
         </div>
       </div>
 
       <!-- 10〜100ボタン (2行×5列) -->
-      <div id="masterButtonsGrid" class="grid grid-cols-5 gap-1.5">
+      <div id="masterButtonsGrid" class="grid grid-cols-5 gap-2">
         <!-- JSで動的に生成 -->
-      </div>
-    </div>
-
-    <!-- カード追加＆管理 -->
-    <div class="bg-slate-800 rounded-2xl p-3.5 border border-slate-700">
-      <div class="flex items-center justify-between mb-2.5">
-        <div class="flex items-center gap-1.5">
-          <i class="fa-solid fa-cards-blank text-amber-400"></i>
-          <span class="text-xs font-bold text-slate-200">獲得カード管理</span>
-        </div>
-        <button onclick="openCardModal(masterSelectedIdx)" class="px-2.5 py-1 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition flex items-center gap-1">
-          <i class="fa-solid fa-plus text-[10px]"></i>
-          <span>カード付与</span>
-        </button>
-      </div>
-      <div id="masterCardsList" class="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar">
-        <!-- カード一覧 -->
       </div>
     </div>
   </div>
 
   <!-- ========================================================
-       【モーダル群: QRコード / カード追加 / 共有】
+       【モーダル群: QRコード / 共有】
        ======================================================== -->
 
   <!-- QRコード表示モーダル -->
@@ -306,68 +260,6 @@
           閉じる
         </button>
       </div>
-    </div>
-  </div>
-
-  <!-- カード獲得・追加モーダル -->
-  <div id="cardModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all">
-      <div class="bg-amber-900 text-amber-100 px-4 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <i class="fa-solid fa-id-card text-base"></i>
-          <h3 class="font-bold text-base" id="cardModalTitle">カードの獲得・登録</h3>
-        </div>
-        <button onclick="closeCardModal()" class="text-amber-200 hover:text-white transition">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-      </div>
-      <form onsubmit="handleSaveCard(event)" class="p-4 space-y-3">
-        <input type="hidden" id="cardPlayerIndex" value="0">
-        
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1">カード名 <span class="text-rose-500">*</span></label>
-          <input type="text" id="cardNameInput" required placeholder="例: 文豪の初版本、卒論特論A、学芸員資格" 
-            class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-800 focus:outline-none font-bold">
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1">効果・内容メモ</label>
-          <textarea id="cardEffectInput" rows="2" placeholder="例: 止まった時りてら+50 / ピンチを1回回避" 
-            class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-800 focus:outline-none"></textarea>
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1">カードタイプ / 色分け</label>
-          <div class="grid grid-cols-4 gap-1.5 text-xs font-bold">
-            <label class="flex items-center justify-center gap-1 p-2 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50 has-[:checked]:border-amber-700 has-[:checked]:bg-amber-50">
-              <input type="radio" name="cardColor" value="amber" checked class="text-amber-800">
-              <span class="text-amber-900">教養</span>
-            </label>
-            <label class="flex items-center justify-center gap-1 p-2 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50 has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50">
-              <input type="radio" name="cardColor" value="indigo" class="text-indigo-600">
-              <span class="text-indigo-800">文芸</span>
-            </label>
-            <label class="flex items-center justify-center gap-1 p-2 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50 has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50">
-              <input type="radio" name="cardColor" value="emerald" class="text-emerald-600">
-              <span class="text-emerald-800">資格</span>
-            </label>
-            <label class="flex items-center justify-center gap-1 p-2 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50 has-[:checked]:border-rose-600 has-[:checked]:bg-rose-50">
-              <input type="radio" name="cardColor" value="rose" class="text-rose-600">
-              <span class="text-rose-800">特殊</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="pt-2 flex items-center justify-end gap-2">
-          <button type="button" onclick="closeCardModal()" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition">
-            キャンセル
-          </button>
-          <button type="submit" class="px-4 py-1.5 text-xs font-bold bg-amber-900 text-white hover:bg-amber-800 rounded-lg shadow transition flex items-center gap-1">
-            <i class="fa-solid fa-plus"></i>
-            <span>獲得する</span>
-          </button>
-        </div>
-      </form>
     </div>
   </div>
 
@@ -423,10 +315,8 @@
         border: 'border-blue-400',
         ring: 'ring-blue-400',
         headerBg: 'bg-blue-800',
-        lightBg: 'bg-blue-50/70',
-        badge: 'bg-blue-100 text-blue-900 border-blue-200',
+        lightBg: 'bg-blue-50/80',
         accentText: 'text-blue-700',
-        btnBg: 'bg-blue-600 hover:bg-blue-700',
         barGrad: 'from-blue-600 to-indigo-500'
       },
       '2': { 
@@ -434,10 +324,8 @@
         border: 'border-rose-400',
         ring: 'ring-rose-400',
         headerBg: 'bg-rose-800',
-        lightBg: 'bg-rose-50/70',
-        badge: 'bg-rose-100 text-rose-900 border-rose-200',
+        lightBg: 'bg-rose-50/80',
         accentText: 'text-rose-700',
-        btnBg: 'bg-rose-600 hover:bg-rose-700',
         barGrad: 'from-rose-600 to-pink-500'
       },
       '3': { 
@@ -445,10 +333,8 @@
         border: 'border-emerald-400',
         ring: 'ring-emerald-400',
         headerBg: 'bg-emerald-800',
-        lightBg: 'bg-emerald-50/70',
-        badge: 'bg-emerald-100 text-emerald-900 border-emerald-200',
+        lightBg: 'bg-emerald-50/80',
         accentText: 'text-emerald-700',
-        btnBg: 'bg-emerald-600 hover:bg-emerald-700',
         barGrad: 'from-emerald-600 to-teal-500'
       },
       '4': { 
@@ -456,20 +342,18 @@
         border: 'border-amber-400',
         ring: 'ring-amber-400',
         headerBg: 'bg-amber-800',
-        lightBg: 'bg-amber-50/70',
-        badge: 'bg-amber-100 text-amber-900 border-amber-200',
+        lightBg: 'bg-amber-50/80',
         accentText: 'text-amber-700',
-        btnBg: 'bg-amber-600 hover:bg-amber-700',
         barGrad: 'from-amber-600 to-yellow-500'
       },
     };
 
     // --- 初期状態 (初期値0ポイント、りてらポイントのみ) ---
     const DEFAULT_PLAYERS = [
-      { id: 1, name: 'プレイヤー 1', colorKey: '1', litera: 0, cards: [] },
-      { id: 2, name: 'プレイヤー 2', colorKey: '2', litera: 0, cards: [] },
-      { id: 3, name: 'プレイヤー 3', colorKey: '3', litera: 0, cards: [] },
-      { id: 4, name: 'プレイヤー 4', colorKey: '4', litera: 0, cards: [] },
+      { id: 1, name: 'プレイヤー 1', colorKey: '1', litera: 0 },
+      { id: 2, name: 'プレイヤー 2', colorKey: '2', litera: 0 },
+      { id: 3, name: 'プレイヤー 3', colorKey: '3', litera: 0 },
+      { id: 4, name: 'プレイヤー 4', colorKey: '4', litera: 0 },
     ];
 
     let gameState = {
@@ -486,68 +370,16 @@
     // PCメイン画面状態
     let activeFocusPlayerIdx = null; // null: 4分割, 0〜3: 個別拡大
     let keyboardSelectedPlayerIdx = 0; // 矢印キーでハイライトされているプレイヤー
-    let splitOpModes = { 0: 'add', 1: 'add', 2: 'add', 3: 'add' }; // 各枠の加算/減算トグル
-    let focusOpMode = 'add';
 
-    let isSoundEnabled = true;
     let peer = null;
     let peerConnections = [];
     let isHost = false;
     let roomId = null;
 
     // ==========================================
-    // 音響システム (Web Audio API)
-    // ==========================================
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    let audioCtx = null;
-
-    function initAudio() {
-      if (!audioCtx) audioCtx = new AudioContext();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
-
-    function playTone(freq, type = 'sine', duration = 0.12, gainVal = 0.1) {
-      if (!isSoundEnabled) return;
-      try {
-        initAudio();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + duration);
-      } catch (e) {}
-    }
-
-    function playAddSound(amount) {
-      playTone(460 + Math.min(amount, 100) * 3, 'triangle', 0.15, 0.12);
-    }
-    function playSubSound() {
-      playTone(240, 'sawtooth', 0.12, 0.08);
-    }
-    function playCardSound() {
-      if (!isSoundEnabled) return;
-      setTimeout(() => playTone(523.25, 'sine', 0.1, 0.12), 0);
-      setTimeout(() => playTone(659.25, 'sine', 0.1, 0.12), 80);
-      setTimeout(() => playTone(783.99, 'sine', 0.2, 0.15), 160);
-    }
-
-    function toggleSound() {
-      isSoundEnabled = !isSoundEnabled;
-      const icon = document.getElementById('soundIcon');
-      if (icon) {
-        icon.className = isSoundEnabled ? 'fa-solid fa-volume-high text-xs' : 'fa-solid fa-volume-xmark text-xs text-slate-400';
-      }
-    }
-
-    // ==========================================
     // ストレージ保存 & 同期
     // ==========================================
-    const STORAGE_KEY = 'bungakubu_jinsei_litera_v2';
+    const STORAGE_KEY = 'bungakubu_jinsei_litera_v3';
 
     function saveState(broadcast = true) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
@@ -565,6 +397,34 @@
             gameState = parsed;
           }
         } catch (e) {}
+      }
+    }
+
+    // ==========================================
+    // 順位（ランキング）計算ロジック
+    // ==========================================
+    function calculatePlayerRanks() {
+      const sorted = [...gameState.players].sort((a, b) => b.litera - a.litera);
+      const ranks = {};
+      let currentRank = 1;
+      for (let i = 0; i < sorted.length; i++) {
+        if (i > 0 && sorted[i].litera < sorted[i - 1].litera) {
+          currentRank = i + 1;
+        }
+        ranks[sorted[i].id] = currentRank;
+      }
+      return { ranks, sorted };
+    }
+
+    function getRankBadgeHtml(rank) {
+      if (rank === 1) {
+        return `<span class="px-2.5 py-0.5 text-xs font-black rounded-full bg-amber-400 text-amber-950 border border-amber-300 shadow-2xs flex items-center gap-1 shrink-0"><i class="fa-solid fa-crown text-[10px]"></i>1位</span>`;
+      } else if (rank === 2) {
+        return `<span class="px-2.5 py-0.5 text-xs font-black rounded-full bg-slate-200 text-slate-800 border border-slate-300 shadow-2xs flex items-center gap-1 shrink-0"><i class="fa-solid fa-medal text-[10px]"></i>2位</span>`;
+      } else if (rank === 3) {
+        return `<span class="px-2.5 py-0.5 text-xs font-black rounded-full bg-amber-700/40 text-amber-100 border border-amber-600/40 shadow-2xs flex items-center gap-1 shrink-0"><i class="fa-solid fa-award text-[10px]"></i>3位</span>`;
+      } else {
+        return `<span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-white/20 text-white shrink-0">4位</span>`;
       }
     }
 
@@ -593,35 +453,7 @@
     }
 
     // ==========================================
-    // 順位（ランキング）計算ロジック
-    // ==========================================
-    function calculatePlayerRanks() {
-      const sorted = [...gameState.players].sort((a, b) => b.litera - a.litera);
-      const ranks = {};
-      let currentRank = 1;
-      for (let i = 0; i < sorted.length; i++) {
-        if (i > 0 && sorted[i].litera < sorted[i - 1].litera) {
-          currentRank = i + 1;
-        }
-        ranks[sorted[i].id] = currentRank;
-      }
-      return { ranks, sorted };
-    }
-
-    function getRankBadgeHtml(rank) {
-      if (rank === 1) {
-        return `<span class="px-2 py-0.5 text-[11px] font-black rounded-full bg-amber-400 text-amber-950 border border-amber-300 shadow-2xs flex items-center gap-1 shrink-0"><i class="fa-solid fa-crown text-[10px]"></i>1位</span>`;
-      } else if (rank === 2) {
-        return `<span class="px-2 py-0.5 text-[11px] font-black rounded-full bg-slate-200 text-slate-800 border border-slate-300 shadow-2xs flex items-center gap-1 shrink-0"><i class="fa-solid fa-medal text-[10px]"></i>2位</span>`;
-      } else if (rank === 3) {
-        return `<span class="px-2 py-0.5 text-[11px] font-black rounded-full bg-amber-700/30 text-amber-100 border border-amber-600/40 shadow-2xs flex items-center gap-1 shrink-0"><i class="fa-solid fa-award text-[10px]"></i>3位</span>`;
-      } else {
-        return `<span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-white/20 text-white shrink-0">4位</span>`;
-      }
-    }
-
-    // ==========================================
-    // 【ビュー1】PCメイン画面: 4分割グリッド
+    // 【ビュー1】PCメイン画面: 4分割グリッド (超巨大表示・増減ボタンなし)
     // ==========================================
     function renderSplitGrid() {
       document.getElementById('mainBoardView').classList.remove('hidden');
@@ -638,7 +470,7 @@
       // ヘッダーのランキングサマリーバー更新
       const headerRankingBar = document.getElementById('headerRankingBar');
       if (headerRankingBar) {
-        headerRankingBar.innerHTML = rankData.sorted.map((p, idx) => {
+        headerRankingBar.innerHTML = rankData.sorted.map(p => {
           const rank = rankData.ranks[p.id];
           const badge = (rank === 1) ? '🥇 1位' : (rank === 2) ? '🥈 2位' : (rank === 3) ? '🥉 3位' : '4位';
           return `<span class="flex items-center gap-1 ${rank === 1 ? 'text-amber-800 font-black' : 'text-slate-600'}">
@@ -647,20 +479,16 @@
         }).join('<span class="text-slate-300">|</span>');
       }
 
-      const VALUES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-
       gameState.players.forEach((player, pIdx) => {
         const theme = PLAYER_THEMES[player.colorKey || (pIdx + 1)];
-        const cardCount = (player.cards || []).length;
         const percent = Math.min(Math.max((player.litera / gameState.maxGauge) * 100, 0), 100);
         const isSelected = (keyboardSelectedPlayerIdx === pIdx);
-        const opMode = splitOpModes[pIdx] || 'add';
         const rank = rankData.ranks[player.id];
         const rankBadge = getRankBadgeHtml(rank);
 
         const cardEl = document.createElement('div');
-        cardEl.className = `bg-white rounded-xl sm:rounded-2xl border-2 ${theme.border} shadow-xs hover:shadow-md transition-all flex flex-col overflow-hidden relative ${
-          isSelected ? 'ring-4 ring-amber-400/90 shadow-lg' : ''
+        cardEl.className = `bg-white rounded-2xl border-2 ${theme.border} shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden relative cursor-pointer ${
+          isSelected ? 'ring-4 ring-amber-400 shadow-xl scale-[1.008]' : ''
         }`;
         
         cardEl.onclick = (e) => {
@@ -671,87 +499,45 @@
 
         cardEl.innerHTML = `
           <!-- 枠ヘッダー（順位バッジ ＆ プレイヤー名 ＆ アクション） -->
-          <div class="${theme.headerBg} text-white px-3 py-1.5 flex items-center justify-between shrink-0">
-            <div class="flex items-center gap-1.5 flex-1 mr-2 overflow-hidden">
+          <div class="${theme.headerBg} text-white px-3.5 py-2 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2 flex-1 mr-2 overflow-hidden">
               <!-- 順位バッジ -->
               ${rankBadge}
-              <span class="w-5 h-5 rounded-full bg-white/20 text-white font-bold text-[11px] flex items-center justify-center shrink-0">P${player.id}</span>
+              <span class="w-6 h-6 rounded-full bg-white/20 text-white font-bold text-xs flex items-center justify-center shrink-0">P${player.id}</span>
               <input type="text" value="${escapeHtml(player.name)}" onchange="updatePlayerName(${pIdx}, this.value)"
-                class="bg-transparent text-white font-bold text-sm sm:text-base focus:bg-white/20 px-1.5 py-0.2 rounded outline-none border-b border-transparent focus:border-white w-full truncate" title="名前を変更">
+                class="bg-transparent text-white font-bold text-base sm:text-lg focus:bg-white/20 px-2 py-0.5 rounded outline-none border-b border-transparent focus:border-white w-full truncate" title="名前を変更">
             </div>
 
-            <div class="flex items-center gap-1 shrink-0">
+            <div class="flex items-center gap-1.5 shrink-0">
               <!-- スマホ閲覧用QRボタン -->
-              <button onclick="openPlayerQrModal(${player.id})" class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/15 hover:bg-white/30 text-white transition flex items-center gap-1" title="スマホ閲覧用QRコードを表示">
-                <i class="fa-solid fa-qrcode text-[10px]"></i>
+              <button onclick="openPlayerQrModal(${player.id})" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-white/15 hover:bg-white/30 text-white transition flex items-center gap-1" title="スマホ閲覧用QRコードを表示">
+                <i class="fa-solid fa-qrcode"></i>
                 <span class="hidden sm:inline">閲覧QR</span>
               </button>
 
-              <!-- カード枚数バッジ -->
-              <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-white/20 text-white" title="獲得カード枚数">
-                <i class="fa-solid fa-id-card text-[10px] mr-1"></i>${cardCount}
-              </span>
-
               <!-- 拡大ボタン -->
-              <button onclick="openFocusView(${pIdx})" class="px-2 py-0.5 text-[11px] font-bold rounded bg-white text-slate-800 hover:bg-amber-50 shadow-2xs transition flex items-center gap-1" title="拡大表示">
-                <i class="fa-solid fa-up-right-and-down-left-from-center text-[9px]"></i>
+              <button onclick="openFocusView(${pIdx})" class="px-2 py-1 text-xs font-bold rounded-lg bg-white text-slate-800 hover:bg-amber-50 shadow-2xs transition flex items-center gap-1" title="拡大表示">
+                <i class="fa-solid fa-up-right-and-down-left-from-center text-[10px]"></i>
               </button>
             </div>
           </div>
 
-          <!-- 中央：超特大ポイント表示 ＆ ゲージバー -->
-          <div class="px-3 py-1 sm:py-2 flex-1 flex flex-col justify-center items-center text-center">
+          <!-- 中央：超巨大ポイント表示 ＆ ゲージバー（机の遠くからでも一目瞭然） -->
+          <div class="px-4 py-2 flex-1 flex flex-col justify-center items-center text-center">
             
-            <div class="flex items-baseline justify-center gap-1.5">
+            <div class="flex items-baseline justify-center gap-2 my-auto">
               <!-- 超特大ポイント数字 -->
-              <span class="text-4xl sm:text-5xl md:text-6xl font-black ${theme.accentText} tracking-tight leading-none drop-shadow-2xs">
+              <span class="text-6xl sm:text-7xl md:text-8xl font-black ${theme.accentText} tracking-tight leading-none drop-shadow-sm">
                 ${player.litera}
               </span>
-              <span class="text-xs sm:text-sm font-bold text-slate-500">pt</span>
-
-              <!-- 直接入力ボタン/ポップ -->
-              <input type="number" value="${player.litera}" onchange="setPointDirect(${pIdx}, this.value)"
-                class="w-14 sm:w-16 px-1 py-0.5 text-center font-bold text-xs bg-slate-50 border border-slate-200 rounded-md focus:ring-1 focus:ring-amber-500 outline-none ml-1 text-slate-700" title="キーボードで直接編集">
+              <span class="text-lg sm:text-xl font-bold text-slate-500">pt</span>
             </div>
 
             <!-- ステータスバー（ゲージ） -->
-            <div class="w-full max-w-md bg-slate-100 rounded-full h-2.5 sm:h-3 p-0.5 overflow-hidden shadow-inner mt-1 mb-1">
-              <div class="status-bar-transition bg-gradient-to-r ${theme.barGrad} h-full rounded-full" style="width: ${percent}%"></div>
-            </div>
-          </div>
-
-          <!-- 下部：操作コントロール（10〜100ボタン ＆ 加減算トグル） -->
-          <div class="px-2.5 pb-2 pt-1 border-t border-slate-100 bg-slate-50/50 shrink-0">
-            <div class="flex items-center justify-between gap-1 mb-1">
-              <span class="text-[10px] font-bold text-slate-400">りてら増減:</span>
-              
-              <!-- 加算 / 減算 トグルスイッチ -->
-              <div class="flex bg-slate-200/80 p-0.5 rounded-md text-[10px] font-bold">
-                <button onclick="setSplitOpMode(${pIdx}, 'add')" class="px-2 py-0.2 rounded transition ${opMode === 'add' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600'}">＋ 加算</button>
-                <button onclick="setSplitOpMode(${pIdx}, 'sub')" class="px-2 py-0.2 rounded transition ${opMode === 'sub' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-600'}">− 減算</button>
-              </div>
-
-              <!-- カード獲得ボタン -->
-              <button onclick="openCardModal(${pIdx})" class="text-[10px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded transition flex items-center gap-1">
-                <i class="fa-solid fa-plus text-[9px]"></i> カード
-              </button>
+            <div class="w-full max-w-lg bg-slate-100 rounded-full h-4 sm:h-5 p-1 overflow-hidden shadow-inner mt-2 mb-3">
+              <div class="status-bar-transition bg-gradient-to-r ${theme.barGrad} h-full rounded-full shadow" style="width: ${percent}%"></div>
             </div>
 
-            <!-- 10〜100ボタン (2行×5列) -->
-            <div class="grid grid-cols-5 gap-1">
-              ${VALUES.map(val => {
-                const isSub = (opMode === 'sub');
-                const btnColor = isSub 
-                  ? 'bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white border-rose-200' 
-                  : 'bg-white text-indigo-700 hover:bg-indigo-600 hover:text-white border-indigo-200';
-                return `
-                  <button onclick="addPoint(${pIdx}, ${isSub ? -val : val})" 
-                    class="py-1 px-0.5 text-[11px] sm:text-xs font-black rounded border shadow-2xs transition active:scale-95 flex items-center justify-center ${btnColor}">
-                    ${isSub ? '-' : '+'}${val}
-                  </button>
-                `;
-              }).join('')}
-            </div>
           </div>
         `;
 
@@ -771,7 +557,6 @@
       const player = gameState.players[pIdx];
       const theme = PLAYER_THEMES[player.colorKey || (pIdx + 1)];
       const percent = Math.min(Math.max((player.litera / gameState.maxGauge) * 100, 0), 100);
-      const VALUES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
       const rankData = calculatePlayerRanks();
       const rank = rankData.ranks[player.id];
@@ -782,94 +567,34 @@
       indicator.innerHTML = `${rankBadge} <span>P${player.id}</span> <span>${escapeHtml(player.name)}</span>`;
 
       const focusContent = document.getElementById('focusContent');
-      focusContent.className = `flex-1 bg-white rounded-2xl p-3 sm:p-5 shadow-sm border-2 ${theme.border} overflow-hidden flex flex-col lg:flex-row gap-4`;
+      focusContent.className = `flex-1 bg-white rounded-2xl p-6 shadow-sm border-2 ${theme.border} overflow-hidden flex flex-col items-center justify-center text-center relative`;
 
       focusContent.innerHTML = `
-        <!-- 左カラム：大画面ポイント操作 -->
-        <div class="flex-1 flex flex-col justify-between overflow-y-auto custom-scrollbar pr-1">
-          
-          <!-- 名前とQRボタン -->
-          <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
-            <div class="flex items-center gap-2 flex-1">
-              <span class="text-xs font-bold text-slate-400">名前:</span>
-              <input type="text" value="${escapeHtml(player.name)}" onchange="updatePlayerName(${pIdx}, this.value)"
-                class="font-bold text-base sm:text-lg text-slate-800 bg-slate-50 border border-slate-200 px-2.5 py-0.5 rounded-lg focus:ring-1 focus:ring-amber-600 outline-none flex-1 max-w-xs">
-            </div>
-            <button onclick="openPlayerQrModal(${player.id})" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition flex items-center gap-1.5">
-              <i class="fa-solid fa-qrcode"></i>
-              <span>スマホ閲覧用QR</span>
-            </button>
-          </div>
-
-          <!-- ポイント超特大表示 ＆ ゲージ -->
-          <div class="my-auto py-3 text-center">
-            <span class="text-xs font-bold text-slate-400 tracking-wider">りてらポイント</span>
-            <div class="flex items-baseline justify-center gap-2 my-1">
-              <span class="text-6xl sm:text-7xl md:text-8xl font-black ${theme.accentText} tracking-tight leading-none drop-shadow-sm">
-                ${player.litera}
-              </span>
-              <span class="text-lg font-bold text-slate-500">pt</span>
-            </div>
-
-            <!-- ゲージバー -->
-            <div class="w-full max-w-lg mx-auto bg-slate-100 rounded-full h-4 sm:h-5 p-1 overflow-hidden shadow-inner my-2">
-              <div class="status-bar-transition bg-gradient-to-r ${theme.barGrad} h-full rounded-full shadow" style="width: ${percent}%"></div>
-            </div>
-
-            <!-- 直接入力欄 -->
-            <div class="inline-flex items-center gap-1.5 text-xs text-slate-500 mt-1">
-              <span>直接修正:</span>
-              <input type="number" value="${player.litera}" onchange="setPointDirect(${pIdx}, this.value)"
-                class="w-20 px-2 py-0.5 text-center font-bold text-base text-slate-800 bg-slate-50 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 outline-none">
-              <span>pt</span>
-            </div>
-          </div>
-
-          <!-- 10〜100ボタン (加算 & 減算) -->
-          <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 shrink-0">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-bold text-slate-600">ワンクリック増減 (10〜100 pt)</span>
-              <!-- 加算/減算切替 -->
-              <div class="flex bg-slate-200 p-0.5 rounded-lg text-xs font-bold">
-                <button onclick="setFocusOpMode('add')" class="px-3 py-0.5 rounded-md transition ${focusOpMode === 'add' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600'}">＋ 加算</button>
-                <button onclick="setFocusOpMode('sub')" class="px-3 py-0.5 rounded-md transition ${focusOpMode === 'sub' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-600'}">− 減算</button>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-5 gap-1.5">
-              ${VALUES.map(val => {
-                const isSub = (focusOpMode === 'sub');
-                const btnColor = isSub 
-                  ? 'bg-rose-600 hover:bg-rose-700 text-white' 
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white';
-                return `
-                  <button onclick="addPoint(${pIdx}, ${isSub ? -val : val})" 
-                    class="py-2.5 px-1 font-black text-sm sm:text-base rounded-xl shadow-xs transition active:scale-95 flex items-center justify-center ${btnColor}">
-                    ${isSub ? '-' : '+'}${val}
-                  </button>
-                `;
-              }).join('')}
-            </div>
-          </div>
-
+        <!-- 右上QRボタン -->
+        <div class="absolute top-4 right-4">
+          <button onclick="openPlayerQrModal(${player.id})" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-qrcode"></i>
+            <span>スマホ閲覧用QR</span>
+          </button>
         </div>
 
-        <!-- 右カラム：手札カード管理一覧 -->
-        <div class="w-full lg:w-80 bg-slate-50 rounded-2xl p-3 sm:p-4 border border-slate-200 flex flex-col shrink-0">
-          <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-200 shrink-0">
-            <div class="flex items-center gap-1.5">
-              <i class="fa-solid fa-cards-blank text-amber-800"></i>
-              <h3 class="font-bold text-sm text-slate-800">獲得カード一覧</h3>
-              <span class="text-xs font-bold px-2 py-0.2 rounded-full bg-amber-100 text-amber-900">${(player.cards || []).length}枚</span>
-            </div>
-            <button onclick="openCardModal(${pIdx})" class="px-2.5 py-1 text-xs font-bold bg-amber-800 text-white hover:bg-amber-700 rounded-lg shadow-2xs transition flex items-center gap-1">
-              <i class="fa-solid fa-plus text-[10px]"></i>
-              <span>カード追加</span>
-            </button>
+        <div class="my-auto flex flex-col items-center">
+          <div class="mb-3">
+            ${rankBadge}
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-800 mb-2">${escapeHtml(player.name)}</h2>
+
+          <!-- 超特大ポイント数字 -->
+          <div class="flex items-baseline justify-center gap-2 my-2">
+            <span class="text-8xl sm:text-9xl font-black ${theme.accentText} tracking-tight leading-none drop-shadow-sm">
+              ${player.litera}
+            </span>
+            <span class="text-2xl font-bold text-slate-500">pt</span>
           </div>
 
-          <div class="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-            ${renderCardListHtml(player.cards, pIdx, true)}
+          <!-- ゲージバー -->
+          <div class="w-full max-w-xl mx-auto bg-slate-100 rounded-full h-6 p-1 overflow-hidden shadow-inner my-4">
+            <div class="status-bar-transition bg-gradient-to-r ${theme.barGrad} h-full rounded-full shadow" style="width: ${percent}%"></div>
           </div>
         </div>
       `;
@@ -888,20 +613,24 @@
       const theme = PLAYER_THEMES[player.colorKey || (pIdx + 1)];
       const percent = Math.min(Math.max((player.litera / gameState.maxGauge) * 100, 0), 100);
 
-      const cardBox = document.getElementById('playerViewerCard');
-      cardBox.className = `my-4 p-5 rounded-2xl border-2 ${theme.border} ${theme.lightBg} text-slate-900 shadow-md text-center`;
-      cardBox.innerHTML = `
-        <div class="inline-block px-3 py-1 rounded-full ${theme.headerBg} text-white text-xs font-bold mb-2">
-          プレイヤー ${player.id}
-        </div>
-        <h2 class="font-black text-2xl text-slate-900 mb-1">${escapeHtml(player.name)}</h2>
-        <span class="text-xs font-bold text-slate-500">りてらポイント</span>
+      const rankData = calculatePlayerRanks();
+      const rank = rankData.ranks[player.id];
+      const rankBadge = getRankBadgeHtml(rank);
 
-        <div class="flex items-baseline justify-center gap-1 my-2">
-          <span class="text-6xl font-black ${theme.accentText} tracking-tight leading-none">
+      const cardBox = document.getElementById('playerViewerCard');
+      cardBox.className = `my-6 p-6 rounded-2xl border-2 ${theme.border} ${theme.lightBg} text-slate-900 shadow-md text-center`;
+      cardBox.innerHTML = `
+        <div class="flex items-center justify-center gap-2 mb-2">
+          ${rankBadge}
+          <span class="px-2.5 py-0.5 rounded-full ${theme.headerBg} text-white text-xs font-bold">P${player.id}</span>
+        </div>
+        <h2 class="font-black text-3xl text-slate-900 mb-1">${escapeHtml(player.name)}</h2>
+
+        <div class="flex items-baseline justify-center gap-1.5 my-3">
+          <span class="text-7xl font-black ${theme.accentText} tracking-tight leading-none">
             ${player.litera}
           </span>
-          <span class="text-base font-bold text-slate-600">pt</span>
+          <span class="text-xl font-bold text-slate-600">pt</span>
         </div>
 
         <div class="w-full bg-slate-200 rounded-full h-4 p-1 overflow-hidden shadow-inner my-2">
@@ -909,24 +638,21 @@
         </div>
       `;
 
-      // カード一覧
-      const cards = player.cards || [];
-      document.getElementById('playerViewerCardCount').innerText = `${cards.length}枚`;
-      const listEl = document.getElementById('playerViewerCardsList');
-      listEl.innerHTML = renderCardListHtml(cards, pIdx, false); // 編集・削除ボタンは非表示
-
       // ランキング
       const rankingEl = document.getElementById('playerViewerRanking');
-      const sorted = [...gameState.players].sort((a, b) => b.litera - a.litera);
-      rankingEl.innerHTML = sorted.map((p, idx) => `
-        <div class="flex items-center justify-between py-1 border-b border-slate-700/60 last:border-0 ${p.id === player.id ? 'text-amber-400 font-bold' : 'text-slate-300'}">
-          <div class="flex items-center gap-2">
-            <span class="w-4 text-center font-bold">${idx + 1}位</span>
-            <span>P${p.id} ${escapeHtml(p.name)}</span>
+      rankingEl.innerHTML = rankData.sorted.map(p => {
+        const r = rankData.ranks[p.id];
+        const badge = (r === 1) ? '🥇 1位' : (r === 2) ? '🥈 2位' : (r === 3) ? '🥉 3位' : '4位';
+        return `
+          <div class="flex items-center justify-between py-2 border-b border-slate-700/60 last:border-0 ${p.id === player.id ? 'text-amber-400 font-bold bg-slate-700/30 px-2 rounded-lg' : 'text-slate-300'}">
+            <div class="flex items-center gap-2">
+              <span class="font-bold">${badge}</span>
+              <span>P${p.id} ${escapeHtml(p.name)}</span>
+            </div>
+            <span class="font-black">${p.litera} pt</span>
           </div>
-          <span class="font-bold">${p.litera} pt</span>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     // ==========================================
@@ -941,6 +667,10 @@
       const player = gameState.players[pIdx];
       const theme = PLAYER_THEMES[player.colorKey || (pIdx + 1)];
       const percent = Math.min(Math.max((player.litera / gameState.maxGauge) * 100, 0), 100);
+
+      const rankData = calculatePlayerRanks();
+      const rank = rankData.ranks[player.id];
+      const rankBadge = getRankBadgeHtml(rank);
 
       // タブの動的生成
       const tabsContainer = document.getElementById('masterTabsContainer');
@@ -965,12 +695,13 @@
         box.className = `p-4 rounded-2xl border-2 ${theme.border} bg-slate-800 text-center shadow-lg mb-3`;
         box.innerHTML = `
           <div class="flex items-center justify-center gap-2 mb-1">
+            ${rankBadge}
             <span class="w-5 h-5 rounded-full ${theme.headerBg} text-white font-bold text-xs flex items-center justify-center">P${player.id}</span>
             <span class="font-bold text-lg text-white">${escapeHtml(player.name)}</span>
           </div>
           <span class="text-xs text-slate-400">現在のりてらポイント</span>
           <div class="flex items-baseline justify-center gap-1 my-1">
-            <span class="text-5xl sm:text-6xl font-black ${theme.accentText} tracking-tight">
+            <span class="text-6xl font-black ${theme.accentText} tracking-tight">
               ${player.litera}
             </span>
             <span class="text-sm font-bold text-slate-400">pt</span>
@@ -986,39 +717,32 @@
       const subBtn = document.getElementById('masterModeSub');
       if (addBtn && subBtn) {
         if (masterOpMode === 'add') {
-          addBtn.className = 'px-3 py-1 rounded-md bg-indigo-600 text-white font-bold shadow-xs';
-          subBtn.className = 'px-3 py-1 rounded-md text-slate-400 hover:text-white font-bold';
+          addBtn.className = 'px-3.5 py-1.5 rounded-md bg-indigo-600 text-white font-bold shadow-xs';
+          subBtn.className = 'px-3.5 py-1.5 rounded-md text-slate-400 hover:text-white font-bold';
         } else {
-          addBtn.className = 'px-3 py-1 rounded-md text-slate-400 hover:text-white font-bold';
-          subBtn.className = 'px-3 py-1 rounded-md bg-rose-600 text-white font-bold shadow-xs';
+          addBtn.className = 'px-3.5 py-1.5 rounded-md text-slate-400 hover:text-white font-bold';
+          subBtn.className = 'px-3.5 py-1.5 rounded-md bg-rose-600 text-white font-bold shadow-xs';
         }
       }
 
-      // 10〜100ボタンの動的生成
+      // 10〜100ボタンの動的生成 (2行×5列)
       const btnsGrid = document.getElementById('masterButtonsGrid');
       if (btnsGrid) {
         const VALUES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
         const isSub = (masterOpMode === 'sub');
         btnsGrid.innerHTML = VALUES.map(val => `
           <button onclick="executeMasterPointChange(${val})" 
-            class="py-2.5 px-1 font-black text-sm rounded-xl shadow-xs transition active:scale-95 ${
+            class="py-3 px-1 font-black text-base rounded-xl shadow-xs transition active:scale-95 ${
               isSub ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'
             }">
             ${isSub ? '-' : '+'}${val}
           </button>
         `).join('');
       }
-
-      // カード一覧
-      const cardsListEl = document.getElementById('masterCardsList');
-      if (cardsListEl) {
-        cardsListEl.innerHTML = renderCardListHtml(player.cards || [], pIdx, true);
-      }
     }
 
     function selectMasterPlayer(idx) {
       masterSelectedIdx = idx;
-      playTone(500, 'sine', 0.08);
       renderMasterController();
     }
 
@@ -1033,88 +757,12 @@
     }
 
     // ==========================================
-    // カードリストHTML生成
-    // ==========================================
-    function renderCardListHtml(cards, pIdx, allowEdit = true) {
-      if (!cards || cards.length === 0) {
-        return `
-          <div class="h-28 flex flex-col items-center justify-center text-slate-400 border border-dashed border-slate-300 rounded-xl p-3 text-center">
-            <i class="fa-regular fa-folder-open text-2xl mb-1 text-slate-300"></i>
-            <p class="text-xs">カードがありません</p>
-          </div>
-        `;
-      }
-
-      const COLOR_MAP = {
-        amber: { badge: 'bg-amber-100 text-amber-900 border-amber-200', label: '教養' },
-        indigo: { badge: 'bg-indigo-100 text-indigo-900 border-indigo-200', label: '文芸' },
-        emerald: { badge: 'bg-emerald-100 text-emerald-900 border-emerald-200', label: '資格' },
-        rose: { badge: 'bg-rose-100 text-rose-900 border-rose-200', label: '特殊' },
-      };
-
-      return cards.map((c, cIdx) => {
-        const theme = COLOR_MAP[c.color || 'amber'] || COLOR_MAP.amber;
-        const isUsed = !!c.used;
-
-        return `
-          <div class="bg-white rounded-xl p-2.5 border border-slate-200 shadow-2xs text-left ${isUsed ? 'opacity-50 grayscale-40' : ''}">
-            <div class="flex items-start justify-between gap-1 mb-1">
-              <div class="flex items-center gap-1.5 flex-1 min-w-0">
-                <span class="text-[10px] font-bold px-1.5 py-0.2 rounded border ${theme.badge} shrink-0">${theme.label}</span>
-                <h4 class="font-bold text-xs text-slate-900 truncate ${isUsed ? 'line-through' : ''}">${escapeHtml(c.name)}</h4>
-              </div>
-              ${allowEdit ? `
-                <div class="flex items-center gap-1 shrink-0">
-                  <button onclick="toggleCardUsed(${pIdx}, ${cIdx})" class="px-1.5 py-0.5 text-[10px] font-bold rounded ${isUsed ? 'bg-slate-200 text-slate-600' : 'bg-emerald-100 text-emerald-800'} transition">
-                    ${isUsed ? '済' : '使用'}
-                  </button>
-                  <button onclick="deleteCard(${pIdx}, ${cIdx})" class="p-0.5 text-slate-400 hover:text-rose-600 transition">
-                    <i class="fa-solid fa-trash-can text-[11px]"></i>
-                  </button>
-                </div>
-              ` : `
-                ${isUsed ? '<span class="text-[10px] text-slate-400 font-bold">使用済</span>' : ''}
-              `}
-            </div>
-            ${c.effect ? `
-              <p class="text-[11px] text-slate-600 leading-snug bg-slate-50 p-1.5 rounded-lg border border-slate-100">
-                ${escapeHtml(c.effect)}
-              </p>
-            ` : ''}
-          </div>
-        `;
-      }).join('');
-    }
-
-    // ==========================================
-    // アクションロジック (ポイント操作・カード)
+    // アクションロジック (ポイント操作)
     // ==========================================
     function addPoint(pIdx, amount) {
-      if (amount > 0) playAddSound(amount);
-      else playSubSound();
-
       gameState.players[pIdx].litera = Math.max(0, (gameState.players[pIdx].litera || 0) + amount);
       saveState();
       renderApp();
-    }
-
-    function setPointDirect(pIdx, value) {
-      const parsed = parseInt(value, 10);
-      if (!isNaN(parsed)) {
-        gameState.players[pIdx].litera = Math.max(0, parsed);
-        saveState();
-        renderApp();
-      }
-    }
-
-    function setSplitOpMode(pIdx, mode) {
-      splitOpModes[pIdx] = mode;
-      renderSplitGrid();
-    }
-
-    function setFocusOpMode(mode) {
-      focusOpMode = mode;
-      renderFocusView();
     }
 
     function updatePlayerName(pIdx, newName) {
@@ -1129,13 +777,11 @@
     function openFocusView(pIdx) {
       activeFocusPlayerIdx = pIdx;
       keyboardSelectedPlayerIdx = pIdx;
-      playTone(500, 'sine', 0.1);
       renderApp();
     }
 
     function closeFocusView() {
       activeFocusPlayerIdx = null;
-      playTone(400, 'sine', 0.1);
       renderApp();
     }
 
@@ -1143,75 +789,11 @@
       if (activeFocusPlayerIdx === null) return;
       activeFocusPlayerIdx = (activeFocusPlayerIdx + offset + 4) % 4;
       keyboardSelectedPlayerIdx = activeFocusPlayerIdx;
-      playTone(550, 'sine', 0.08);
       renderApp();
-    }
-
-    // --- カードモーダル ---
-    function openCardModal(pIdx) {
-      document.getElementById('cardPlayerIndex').value = pIdx;
-      const player = gameState.players[pIdx];
-      document.getElementById('cardModalTitle').innerText = `${player.name} のカード追加`;
-      document.getElementById('cardNameInput').value = '';
-      document.getElementById('cardEffectInput').value = '';
-      document.getElementById('cardModal').classList.remove('hidden');
-      setTimeout(() => document.getElementById('cardNameInput').focus(), 50);
-    }
-
-    function closeCardModal() {
-      document.getElementById('cardModal').classList.add('hidden');
-    }
-
-    function handleSaveCard(e) {
-      e.preventDefault();
-      const pIdx = parseInt(document.getElementById('cardPlayerIndex').value, 10);
-      const name = document.getElementById('cardNameInput').value.trim();
-      const effect = document.getElementById('cardEffectInput').value.trim();
-      const colorRadio = document.querySelector('input[name="cardColor"]:checked');
-      const color = colorRadio ? colorRadio.value : 'amber';
-
-      if (!name) return;
-
-      if (!gameState.players[pIdx].cards) gameState.players[pIdx].cards = [];
-      gameState.players[pIdx].cards.push({
-        id: Date.now(),
-        name,
-        effect,
-        color,
-        used: false,
-      });
-
-      playCardSound();
-      try {
-        confetti({ particleCount: 45, spread: 60, origin: { y: 0.6 } });
-      } catch (err) {}
-
-      saveState();
-      closeCardModal();
-      renderApp();
-    }
-
-    function toggleCardUsed(pIdx, cIdx) {
-      const card = gameState.players[pIdx].cards[cIdx];
-      if (card) {
-        card.used = !card.used;
-        playTone(350, 'triangle', 0.1);
-        saveState();
-        renderApp();
-      }
-    }
-
-    function deleteCard(pIdx, cIdx) {
-      if (confirm('このカードを削除しますか？')) {
-        gameState.players[pIdx].cards.splice(cIdx, 1);
-        playTone(250, 'sawtooth', 0.1);
-        saveState();
-        renderApp();
-      }
     }
 
     function confirmResetAll() {
-      if (confirm('全プレイヤーのりてらポイント(0pt)とカードを初期化しますか？')) {
+      if (confirm('全プレイヤーのりてらポイント(0pt)を初期化しますか？')) {
         gameState = {
           players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),
           maxGauge: 100,
@@ -1219,7 +801,6 @@
         saveState();
         activeFocusPlayerIdx = null;
         renderApp();
-        playTone(300, 'sine', 0.2);
       }
     }
 
@@ -1235,7 +816,7 @@
       const player = gameState.players[pIdx];
       const targetUrl = `${getCleanBaseUrl()}?room=${roomId}&role=player&p=${playerId}`;
       
-      document.getElementById('qrModalTitle').innerText = `${player.name} の閲覧用QRコード`;
+      document.getElementById('qrModalTitle').innerText = `${player.name} の閲覧用QR`;
       document.getElementById('qrModalIcon').className = 'fa-solid fa-mobile-screen text-emerald-400';
       document.getElementById('qrModalDesc').innerHTML = `
         <strong>${escapeHtml(player.name)}</strong> のスマホで読み取ってください。<br>
@@ -1253,7 +834,7 @@
       document.getElementById('qrModalIcon').className = 'fa-solid fa-crown text-amber-400';
       document.getElementById('qrModalDesc').innerHTML = `
         <strong>ゲームマスター（オーナー）</strong>のスマホで読み取ってください。<br>
-        <span class="text-amber-700 font-bold">※スマホから全員の得点増減やカード付与が操作できます</span>
+        <span class="text-amber-700 font-bold">※スマホから全員の得点増減が操作できます</span>
       `;
       document.getElementById('qrModalUrl').value = targetUrl;
       document.getElementById('qrModalImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(targetUrl)}`;
@@ -1311,11 +892,10 @@
     // キーボード操作リスナー (矢印キー & Enter/Esc)
     // ==========================================
     window.addEventListener('keydown', (e) => {
-      // 入力フォームフォーカス中はスキップ
       if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
 
       if (activeFocusPlayerIdx !== null) {
-        // 個別拡大画面中
+        // 拡大画面中
         if (e.key === 'Escape') {
           closeFocusView();
         } else if (e.key === 'ArrowLeft') {
@@ -1341,7 +921,6 @@
 
         if (newIdx !== keyboardSelectedPlayerIdx) {
           keyboardSelectedPlayerIdx = newIdx;
-          playTone(450, 'sine', 0.05);
           renderSplitGrid();
         }
       }
@@ -1372,12 +951,10 @@
       const { room } = parseUrlParams();
 
       if (appMode !== 'board' || (room && room.length > 0)) {
-        // クライアントまたはスマホ参加モード
         roomId = room;
         isHost = false;
         connectAsClient(roomId);
       } else {
-        // PCホストモード (部屋自動生成)
         roomId = 'bj-' + Math.random().toString(36).substring(2, 8);
         isHost = true;
         initHost(roomId);
