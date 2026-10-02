@@ -181,7 +181,7 @@
        ======================================================== -->
   <div id="masterController" class="hidden h-full w-full flex-col bg-slate-900 text-white overflow-y-auto p-3 sm:p-4">
     <!-- マスター用ヘッダー -->
-    <div class="flex items-center justify-between pb-2.5 border-b border-slate-700">
+    <div class="flex items-center justify-between pb-2 border-b border-slate-800 shrink-0">
       <div class="flex items-center gap-2">
         <span class="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center">
           <i class="fa-solid fa-crown text-[11px]"></i>
@@ -195,29 +195,37 @@
     </div>
 
     <!-- プレイヤー切り替えタブ -->
-    <div id="masterTabsContainer" class="grid grid-cols-4 gap-1.5 my-3">
+    <div id="masterTabsContainer" class="grid grid-cols-4 gap-1.5 my-2.5 shrink-0">
       <!-- JSで動的にボタン生成 -->
     </div>
 
     <!-- 選択中プレイヤーのポイント表示部 -->
-    <div id="masterPlayerBox" class="p-4 rounded-2xl border text-center shadow-lg mb-3">
+    <div id="masterPlayerBox" class="p-3.5 rounded-2xl border text-center shadow-lg mb-2.5 shrink-0">
       <!-- ポイント表示がJSで入ります -->
     </div>
 
-    <!-- ポイント増減ボタングリッド (10〜100) -->
-    <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700">
-      <div class="flex items-center justify-between mb-3">
-        <span class="text-xs font-bold text-slate-300">りてらポイント増減</span>
-        <!-- 加算 / 減算 トグルスイッチ -->
-        <div class="flex bg-slate-900 p-0.5 rounded-lg border border-slate-700 text-xs font-bold">
-          <button id="masterModeAdd" onclick="setMasterOpMode('add')" class="px-3.5 py-1.5 rounded-md bg-indigo-600 text-white transition">＋ 加算</button>
-          <button id="masterModeSub" onclick="setMasterOpMode('sub')" class="px-3.5 py-1.5 rounded-md text-slate-400 hover:text-white transition">− 減算</button>
+    <!-- ポイント増減セクション (加算・減算 両方を常時並べて配置) -->
+    <div class="space-y-2.5 pb-6">
+      <!-- 加算セクション (＋10〜＋100) -->
+      <div class="bg-slate-800 rounded-2xl p-3 border border-indigo-900/60 shadow-md">
+        <div class="flex items-center gap-1.5 mb-2 text-xs font-black text-indigo-400">
+          <i class="fa-solid fa-plus-circle text-sm"></i>
+          <span>ポイント加算 ( ＋ )</span>
+        </div>
+        <div id="masterAddButtonsGrid" class="grid grid-cols-5 gap-1.5">
+          <!-- JSで動的に生成 (+10〜+100) -->
         </div>
       </div>
 
-      <!-- 10〜100ボタン (2行×5列) -->
-      <div id="masterButtonsGrid" class="grid grid-cols-5 gap-2">
-        <!-- JSで動的に生成 -->
+      <!-- 減算セクション (ー10〜ー100) -->
+      <div class="bg-slate-800 rounded-2xl p-3 border border-rose-900/60 shadow-md">
+        <div class="flex items-center gap-1.5 mb-2 text-xs font-black text-rose-400">
+          <i class="fa-solid fa-minus-circle text-sm"></i>
+          <span>ポイント減算 ( − )</span>
+        </div>
+        <div id="masterSubButtonsGrid" class="grid grid-cols-5 gap-1.5">
+          <!-- JSで動的に生成 (-10〜-100) -->
+        </div>
       </div>
     </div>
   </div>
@@ -366,7 +374,6 @@
     let appMode = 'board'; // 'board' (PCメイン), 'player' (スマホ閲覧), 'master' (スマホ操作)
     let viewerPlayerId = 1; // 'player' モード時の対象プレイヤーID
     let masterSelectedIdx = 0; // 'master' モードで選択中のプレイヤーインデックス (0〜3)
-    let masterOpMode = 'add'; // 'add' (加算) or 'sub' (減算)
     
     // PCメイン画面状態
     let activeFocusPlayerIdx = null; // null: 4分割, 0〜3: 個別拡大
@@ -713,30 +720,27 @@
         `;
       }
 
-      // モード切り替えボタン表示更新
-      const addBtn = document.getElementById('masterModeAdd');
-      const subBtn = document.getElementById('masterModeSub');
-      if (addBtn && subBtn) {
-        if (masterOpMode === 'add') {
-          addBtn.className = 'px-3.5 py-1.5 rounded-md bg-indigo-600 text-white font-bold shadow-xs';
-          subBtn.className = 'px-3.5 py-1.5 rounded-md text-slate-400 hover:text-white font-bold';
-        } else {
-          addBtn.className = 'px-3.5 py-1.5 rounded-md text-slate-400 hover:text-white font-bold';
-          subBtn.className = 'px-3.5 py-1.5 rounded-md bg-rose-600 text-white font-bold shadow-xs';
-        }
+      // 10〜100ボタンの動的生成 (加算・減算 同時常時表示)
+      const VALUES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+
+      // 加算ボタン (+10〜+100)
+      const addGrid = document.getElementById('masterAddButtonsGrid');
+      if (addGrid) {
+        addGrid.innerHTML = VALUES.map(val => `
+          <button onclick="addPoint(masterSelectedIdx, ${val})" 
+            class="py-2.5 px-0.5 font-black text-sm sm:text-base rounded-xl shadow-xs transition active:scale-95 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white">
+            +${val}
+          </button>
+        `).join('');
       }
 
-      // 10〜100ボタンの動的生成 (2行×5列)
-      const btnsGrid = document.getElementById('masterButtonsGrid');
-      if (btnsGrid) {
-        const VALUES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-        const isSub = (masterOpMode === 'sub');
-        btnsGrid.innerHTML = VALUES.map(val => `
-          <button onclick="executeMasterPointChange(${val})" 
-            class="py-3 px-1 font-black text-base rounded-xl shadow-xs transition active:scale-95 ${
-              isSub ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-            }">
-            ${isSub ? '-' : '+'}${val}
+      // 減算ボタン (-10〜-100)
+      const subGrid = document.getElementById('masterSubButtonsGrid');
+      if (subGrid) {
+        subGrid.innerHTML = VALUES.map(val => `
+          <button onclick="addPoint(masterSelectedIdx, -${val})" 
+            class="py-2.5 px-0.5 font-black text-sm sm:text-base rounded-xl shadow-xs transition active:scale-95 bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white">
+            -${val}
           </button>
         `).join('');
       }
@@ -745,16 +749,6 @@
     function selectMasterPlayer(idx) {
       masterSelectedIdx = idx;
       renderMasterController();
-    }
-
-    function setMasterOpMode(mode) {
-      masterOpMode = mode;
-      renderMasterController();
-    }
-
-    function executeMasterPointChange(val) {
-      const amount = (masterOpMode === 'sub') ? -val : val;
-      addPoint(masterSelectedIdx, amount);
     }
 
     // ==========================================
