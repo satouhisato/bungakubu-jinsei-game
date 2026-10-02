@@ -66,9 +66,19 @@
         <div class="w-7 h-7 rounded-lg bg-amber-900 text-amber-100 flex items-center justify-center font-black text-sm shadow">
           文
         </div>
-        <h1 class="font-bold text-base sm:text-lg text-slate-900 tracking-wide">
+        <h1 class="font-bold text-base sm:text-lg text-slate-900 tracking-wide hidden lg:inline">
           文学部人生ゲーム
         </h1>
+
+        <!-- 卓切り替えタブ (第1卓 / 第2卓) -->
+        <div class="flex items-center bg-slate-200/90 p-0.5 rounded-lg border border-slate-300 text-xs font-bold">
+          <button onclick="switchTable('table1')" id="tableTab1" class="px-2 sm:px-2.5 py-1 rounded-md transition flex items-center gap-1 text-slate-700">
+            <i class="fa-solid fa-dice-one"></i><span>第1卓 (A)</span>
+          </button>
+          <button onclick="switchTable('table2')" id="tableTab2" class="px-2 sm:px-2.5 py-1 rounded-md transition flex items-center gap-1 text-slate-700">
+            <i class="fa-solid fa-dice-two"></i><span>第2卓 (B)</span>
+          </button>
+        </div>
       </div>
 
       <!-- 中央：現在のランキングサマリーバー -->
@@ -152,6 +162,7 @@
       <div class="flex items-center gap-2">
         <span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center">文</span>
         <span class="font-bold text-sm text-slate-200">文学部人生ゲーム</span>
+        <span id="playerViewerTableBadge" class="px-2 py-0.5 rounded-full bg-indigo-900/80 text-indigo-200 border border-indigo-700 text-[11px] font-bold">第1卓</span>
       </div>
       <span id="playerViewerSyncBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-emerald-400 border border-slate-700 flex items-center gap-1">
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -186,7 +197,12 @@
         <span class="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center">
           <i class="fa-solid fa-crown text-[11px]"></i>
         </span>
-        <h2 class="font-bold text-sm sm:text-base text-amber-400">マスターコントローラー</h2>
+        <h2 class="font-bold text-sm sm:text-base text-amber-400">マスター</h2>
+        <!-- 卓切り替えタブ (スマホマスター画面でも1卓/2卓を切替可能) -->
+        <div class="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700 text-xs font-bold ml-1">
+          <button onclick="switchMasterTable('table1')" id="masterTabBtn1" class="px-2 py-0.5 rounded-md transition text-slate-400">1卓</button>
+          <button onclick="switchMasterTable('table2')" id="masterTabBtn2" class="px-2 py-0.5 rounded-md transition text-slate-400">2卓</button>
+        </div>
       </div>
       <span id="masterSyncBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800 flex items-center gap-1">
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -382,30 +398,44 @@
     let mqttClient = null;
     let clientId = 'bj_' + Math.random().toString(16).substring(2, 10);
     const BROKER_URL = 'wss://broker.emqx.io:8084/mqtt';
-    let roomId = null;
+    let roomId = 'table1'; // デフォルトは第1卓
+
+    function getTableDisplayName(id) {
+      if (id === 'table1') return '第1卓 (A)';
+      if (id === 'table2') return '第2卓 (B)';
+      return `部屋 (${id})`;
+    }
 
     // ==========================================
-    // ストレージ保存 & 同期
+    // ストレージ保存 & 同期（卓ごとに完全に分離独立）
     // ==========================================
-    const STORAGE_KEY = 'bungakubu_jinsei_litera_v3';
+    function getStorageKey() {
+      return 'bungakubu_jinsei_litera_' + (roomId || 'table1');
+    }
 
     function saveState(broadcast = true) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+      localStorage.setItem(getStorageKey(), JSON.stringify(gameState));
       if (broadcast) {
         broadcastState();
       }
     }
 
     function loadState() {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(getStorageKey());
       if (raw) {
         try {
           const parsed = JSON.parse(raw);
           if (parsed && Array.isArray(parsed.players) && parsed.players.length === 4) {
             gameState = parsed;
+            return;
           }
         } catch (e) {}
       }
+      // 初期化またはデータなし時
+      gameState = {
+        players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),
+        maxGauge: 100,
+      };
     }
 
     // ==========================================
@@ -447,6 +477,19 @@
       });
       gameState.maxGauge = Math.ceil(maxPt / 50) * 50;
 
+      // メインPCヘッダーの卓切り替えボタンの見た目更新
+      const tab1 = document.getElementById('tableTab1');
+      const tab2 = document.getElementById('tableTab2');
+      if (tab1 && tab2) {
+        if (roomId === 'table2') {
+          tab1.className = 'px-2 sm:px-2.5 py-1 rounded-md transition flex items-center gap-1 text-slate-600 hover:text-slate-900 font-bold';
+          tab2.className = 'px-2 sm:px-2.5 py-1 rounded-md transition flex items-center gap-1 bg-white text-slate-900 shadow-2xs font-black';
+        } else {
+          tab1.className = 'px-2 sm:px-2.5 py-1 rounded-md transition flex items-center gap-1 bg-white text-slate-900 shadow-2xs font-black';
+          tab2.className = 'px-2 sm:px-2.5 py-1 rounded-md transition flex items-center gap-1 text-slate-600 hover:text-slate-900 font-bold';
+        }
+      }
+
       if (appMode === 'player') {
         renderPlayerViewer();
       } else if (appMode === 'master') {
@@ -458,6 +501,17 @@
           renderSplitGrid();
         }
       }
+    }
+
+    // 卓切り替えナビゲーション関数
+    function switchTable(targetRoom) {
+      if (roomId === targetRoom) return;
+      window.location.href = window.location.pathname + '?room=' + targetRoom;
+    }
+
+    function switchMasterTable(targetRoom) {
+      if (roomId === targetRoom) return;
+      window.location.href = window.location.pathname + '?room=' + targetRoom + '&role=master';
     }
 
     // ==========================================
@@ -616,6 +670,11 @@
       document.getElementById('masterController').classList.add('hidden');
       document.getElementById('playerViewer').classList.remove('hidden');
 
+      const pTableBadge = document.getElementById('playerViewerTableBadge');
+      if (pTableBadge) {
+        pTableBadge.innerText = getTableDisplayName(roomId);
+      }
+
       const pIdx = Math.max(0, Math.min(viewerPlayerId - 1, 3));
       const player = gameState.players[pIdx];
       const theme = PLAYER_THEMES[player.colorKey || (pIdx + 1)];
@@ -670,6 +729,19 @@
       document.getElementById('mainBoardView').classList.add('hidden');
       document.getElementById('playerViewer').classList.add('hidden');
       document.getElementById('masterController').classList.remove('hidden');
+
+      // マスター卓切り替えボタンの見た目更新
+      const mTab1 = document.getElementById('masterTabBtn1');
+      const mTab2 = document.getElementById('masterTabBtn2');
+      if (mTab1 && mTab2) {
+        if (roomId === 'table2') {
+          mTab1.className = 'px-2 py-0.5 rounded-md transition text-slate-400 font-bold';
+          mTab2.className = 'px-2 py-0.5 rounded-md transition bg-amber-500 text-slate-950 font-black shadow-xs';
+        } else {
+          mTab1.className = 'px-2 py-0.5 rounded-md transition bg-amber-500 text-slate-950 font-black shadow-xs';
+          mTab2.className = 'px-2 py-0.5 rounded-md transition text-slate-400 font-bold';
+        }
+      }
 
       const pIdx = masterSelectedIdx;
       const player = gameState.players[pIdx];
@@ -788,7 +860,8 @@
     }
 
     function confirmResetAll() {
-      if (confirm('全プレイヤーのりてらポイント(0pt)を初期化しますか？')) {
+      const tableLabel = getTableDisplayName(roomId);
+      if (confirm(`【${tableLabel}】の全プレイヤーのりてらポイント(0pt)を初期化しますか？\n※もう片方の卓のデータには影響しません。`)) {
         gameState = {
           players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),
           maxGauge: 100,
@@ -810,11 +883,12 @@
       const pIdx = playerId - 1;
       const player = gameState.players[pIdx];
       const targetUrl = `${getCleanBaseUrl()}?room=${roomId}&role=player&p=${playerId}`;
+      const tableLabel = getTableDisplayName(roomId);
       
-      document.getElementById('qrModalTitle').innerText = `${player.name} の閲覧用QR`;
+      document.getElementById('qrModalTitle').innerText = `【${tableLabel}】${player.name} の閲覧用QR`;
       document.getElementById('qrModalIcon').className = 'fa-solid fa-mobile-screen text-emerald-400';
       document.getElementById('qrModalDesc').innerHTML = `
-        <strong>${escapeHtml(player.name)}</strong> のスマホで読み取ってください。<br>
+        <strong>【${tableLabel}】${escapeHtml(player.name)}</strong> のスマホで読み取ってください。<br>
         <span class="text-emerald-600 font-bold">※編集機能のない閲覧専用画面が開きます</span>
       `;
       document.getElementById('qrModalUrl').value = targetUrl;
@@ -824,11 +898,12 @@
 
     function openMasterQrModal() {
       const targetUrl = `${getCleanBaseUrl()}?room=${roomId}&role=master`;
+      const tableLabel = getTableDisplayName(roomId);
       
-      document.getElementById('qrModalTitle').innerText = `マスター専用 コントローラーQR`;
+      document.getElementById('qrModalTitle').innerText = `【${tableLabel}】マスター用コントローラーQR`;
       document.getElementById('qrModalIcon').className = 'fa-solid fa-crown text-amber-400';
       document.getElementById('qrModalDesc').innerHTML = `
-        <strong>ゲームマスター（オーナー）</strong>のスマホで読み取ってください。<br>
+        <strong>【${tableLabel}】ゲームマスター（オーナー）</strong>のスマホで読み取ってください。<br>
         <span class="text-amber-700 font-bold">※スマホから全員の得点増減が操作できます</span>
       `;
       document.getElementById('qrModalUrl').value = targetUrl;
@@ -939,17 +1014,16 @@
         appMode = 'board';
       }
 
-      // 部屋IDの初期化・固定化（リロードしても同じ部屋を維持）
-      if (room && room.length > 0) {
-        roomId = room;
+      // 部屋IDの決定 (指定がなければデフォルト: 'table1' = 第1卓)
+      if (room && room.trim().length > 0) {
+        roomId = room.trim();
       } else {
-        const savedRoom = localStorage.getItem('bungakubu_last_room_id');
-        roomId = savedRoom || ('bj-' + Math.random().toString(36).substring(2, 8));
-        localStorage.setItem('bungakubu_last_room_id', roomId);
-        
-        // メインPCならURLに?room=xxxを付与して固定
-        const newUrl = window.location.pathname + '?room=' + roomId;
-        window.history.replaceState(null, '', newUrl);
+        roomId = 'table1';
+        // メインPCならURLに?room=table1を付与して固定
+        if (appMode === 'board') {
+          const newUrl = window.location.pathname + '?room=' + roomId;
+          window.history.replaceState(null, '', newUrl);
+        }
       }
 
       return { room: roomId, role, p };
@@ -957,7 +1031,7 @@
 
     function initSync() {
       const topic = `bungakubu/room/${roomId}`;
-      updateSyncStatus('クラウド接続中...');
+      updateSyncStatus(`クラウド接続中 (${getTableDisplayName(roomId)})...`);
       updateIndicators('connecting');
 
       try {
@@ -969,7 +1043,7 @@
         });
 
         mqttClient.on('connect', () => {
-          updateSyncStatus(`クラウド接続完了 (Room: ${roomId})`);
+          updateSyncStatus(`クラウド接続完了 (${getTableDisplayName(roomId)})`);
           updateIndicators('connected');
 
           // トピック購読
@@ -989,7 +1063,7 @@
               const data = JSON.parse(payload.toString());
               if (data && data.sender !== clientId && data.state) {
                 gameState = data.state;
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+                localStorage.setItem(getStorageKey(), JSON.stringify(gameState));
                 renderApp();
               }
             } catch (e) {
@@ -1082,8 +1156,8 @@
     // 起動時イニシャライズ
     // ==========================================
     window.addEventListener('DOMContentLoaded', () => {
-      loadState();
       parseUrlParams();
+      loadState();
       renderApp();
       initSync();
     });
