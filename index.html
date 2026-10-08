@@ -419,6 +419,7 @@
     let appMode = 'board'; // 'board' (PCメイン), 'player' (スマホ閲覧), 'master' (スマホ操作)
     let viewerPlayerId = 1; // 'player' モード時の対象プレイヤーID
     let urlSessionId = null; // スマホURLに含まれるセッションID
+    let tabSessionId = null; // このスマホタブが参加したゲームセッションID
     let masterSelectedIdx = 0; // 'master' モードで選択中のプレイヤーインデックス (0〜3)
     
     // PCメイン画面状態
@@ -434,6 +435,40 @@
       if (id === 'table1') return '第1卓 (A)';
       if (id === 'table2') return '第2卓 (B)';
       return `部屋 (${id})`;
+    }
+
+    // タブ専用のセッション初期化 & 終了判定
+    function initTabSession() {
+      if (appMode !== 'player') return;
+      const storageKey = 'bungakubu_tab_sid_' + roomId;
+      if (urlSessionId) {
+        tabSessionId = urlSessionId;
+        try { sessionStorage.setItem(storageKey, tabSessionId); } catch(e){}
+      } else {
+        try {
+          const saved = sessionStorage.getItem(storageKey);
+          if (saved) {
+            tabSessionId = saved;
+          } else if (gameState && gameState.sessionId) {
+            tabSessionId = gameState.sessionId;
+            sessionStorage.setItem(storageKey, tabSessionId);
+          }
+        } catch(e){}
+      }
+    }
+
+    function isTabExpired() {
+      if (appMode !== 'player') return false;
+      if (!tabSessionId && gameState && gameState.sessionId) {
+        initTabSession();
+      }
+      if (tabSessionId && gameState && gameState.sessionId && tabSessionId !== gameState.sessionId) {
+        return true;
+      }
+      if (urlSessionId && gameState && gameState.sessionId && urlSessionId !== gameState.sessionId) {
+        return true;
+      }
+      return false;
     }
 
     // ==========================================
@@ -709,8 +744,8 @@
         pTableBadge.innerText = getTableDisplayName(roomId);
       }
 
-      // セッション有効性チェック (URLのsidが現在のgameState.sessionIdと異なる場合は終了画面)
-      const isExpired = Boolean(urlSessionId && gameState.sessionId && urlSessionId !== gameState.sessionId);
+      // セッション有効性チェック
+      const isExpired = isTabExpired();
       const expiredEl = document.getElementById('playerViewerExpired');
       const activeEl = document.getElementById('playerViewerActiveContent');
       const badgeEl = document.getElementById('playerViewerSyncBadge');
@@ -811,8 +846,9 @@
     }
 
     function saveViewerPlayerName(pIdx) {
-      if (urlSessionId && gameState.sessionId && urlSessionId !== gameState.sessionId) {
+      if (isTabExpired()) {
         showToast('このゲームは終了しているため名前を変更できません', 'error');
+        renderApp();
         return;
       }
       const input = document.getElementById('viewerPlayerNameInput');
@@ -987,15 +1023,31 @@
     function confirmResetAll() {
       const tableLabel = getTableDisplayName(roomId);
       if (confirm(`【${tableLabel}】を初期化して、次の新しいゲームを開始しますか？\n\n※前回の参加者のスマホ画面は自動的に終了画面に切り替わり、名前変更や干渉ができなくなります。\n※もう片方の卓のデータには影響しません。`)) {
+        const newSid = generateSessionId();
         gameState = {
-          sessionId: generateSessionId(),
+          sessionId: newSid,
           players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),
           maxGauge: 100,
         };
-        saveState();
+        saveState(false);
+        broadcastResetEvent(newSid);
         activeFocusPlayerIdx = null;
         renderApp();
         showToast(`【${tableLabel}】新しいゲームを開始しました！`);
+      }
+    }
+
+    function broadcastResetEvent(newSid) {
+      if (mqttClient && mqttClient.connected && roomId) {
+        const topic = `bungakubu/room/${roomId}`;
+        const payload = JSON.stringify({
+          sender: clientId,
+          type: 'GAME_RESET',
+          newSessionId: newSid,
+          timestamp: Date.now(),
+          state: gameState
+        });
+        mqttClient.publish(topic, payload, { qos: 1, retain: true });
       }
     }
 
@@ -1191,6 +1243,16 @@
             try {
               const data = JSON.parse(payload.toString());
               if (data && data.sender !== clientId && data.state) {
+                // セッション交代の検知（GAME_RESET または sessionId の変化）
+                if (data.type === 'GAME_RESET' || (gameState.sessionId && data.state.sessionId !== gameState.sessionId)) {
+                  if (appMode === 'player') {
+                    if (!tabSessionId) {
+                      tabSessionId = gameState.sessionId || 'prev_session';
+                      try { sessionStorage.setItem('bungakubu_tab_sid_' + roomId, tabSessionId); } catch(e){}
+                    }
+                  }
+                }
+
                 gameState = data.state;
                 localStorage.setItem(getStorageKey(), JSON.stringify(gameState));
                 renderApp();
@@ -1254,7 +1316,10 @@
       // スマホ閲覧画面のバッジ
       const pBadge = document.getElementById('playerViewerSyncBadge');
       if (pBadge) {
-        if (status === 'connected') {
+        if (isTabExpired()) {
+          pBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> ゲーム終了`;
+          pBadge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1';
+        } else if (status === 'connected') {
           pBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> 閲覧専用 (同期中)`;
           pBadge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-emerald-400 border border-slate-700 flex items-center gap-1';
         } else {
@@ -1287,6 +1352,7 @@
     window.addEventListener('DOMContentLoaded', () => {
       parseUrlParams();
       loadState();
+      initTabSession();
       renderApp();
       initSync();
     });
