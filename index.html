@@ -684,16 +684,43 @@
       const rank = rankData.ranks[player.id];
       const rankBadge = getRankBadgeHtml(rank);
 
+      // 入力中のフォーカス状態を保持
+      const currentInput = document.getElementById('viewerPlayerNameInput');
+      const isInputFocused = (currentInput && document.activeElement === currentInput);
+      const tempInputValue = isInputFocused ? currentInput.value : player.name;
+
       const cardBox = document.getElementById('playerViewerCard');
-      cardBox.className = `my-6 p-6 rounded-2xl border-2 ${theme.border} ${theme.lightBg} text-slate-900 shadow-md text-center`;
+      cardBox.className = `my-4 p-5 rounded-2xl border-2 ${theme.border} ${theme.lightBg} text-slate-900 shadow-md text-center relative`;
       cardBox.innerHTML = `
         <div class="flex items-center justify-center gap-2 mb-2">
           ${rankBadge}
           <span class="px-2.5 py-0.5 rounded-full ${theme.headerBg} text-white text-xs font-bold">P${player.id}</span>
         </div>
-        <h2 class="font-black text-3xl text-slate-900 mb-1">${escapeHtml(player.name)}</h2>
 
-        <div class="flex items-baseline justify-center gap-1.5 my-3">
+        <!-- プレイヤー名 入力・変更欄 -->
+        <div class="bg-white/95 rounded-2xl p-3 border border-slate-200 shadow-xs mb-3 max-w-sm mx-auto">
+          <div class="flex items-center justify-between mb-1.5 px-0.5">
+            <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <i class="fa-solid fa-user-pen text-indigo-600"></i>
+              <span>あなたの名前</span>
+            </span>
+            <span class="text-[10px] text-slate-400">タップして自由に変更できます</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="text" id="viewerPlayerNameInput" value="${escapeHtml(tempInputValue)}"
+              onkeydown="if(event.key === 'Enter'){ saveViewerPlayerName(${pIdx}); this.blur(); }"
+              onblur="saveViewerPlayerName(${pIdx})"
+              class="font-black text-xl text-slate-900 bg-slate-50 border-2 border-slate-200 focus:border-indigo-600 focus:bg-white focus:ring-2 focus:ring-indigo-100 rounded-xl py-2 px-3 w-full outline-none text-center transition shadow-2xs"
+              placeholder="あなたの名前を入力" maxlength="12">
+            <button onclick="saveViewerPlayerName(${pIdx})" id="saveNameBtn"
+              class="shrink-0 px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1">
+              <i class="fa-solid fa-check"></i>
+              <span>保存</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-baseline justify-center gap-1.5 my-2">
           <span class="text-7xl font-black ${theme.accentText} tracking-tight leading-none">
             ${player.litera}
           </span>
@@ -704,6 +731,14 @@
           <div class="status-bar-transition bg-gradient-to-r ${theme.barGrad} h-full rounded-full" style="width: ${percent}%"></div>
         </div>
       `;
+
+      if (isInputFocused) {
+        const reInput = document.getElementById('viewerPlayerNameInput');
+        if (reInput) {
+          reInput.focus();
+          reInput.selectionStart = reInput.selectionEnd = reInput.value.length;
+        }
+      }
 
       // ランキング
       const rankingEl = document.getElementById('playerViewerRanking');
@@ -720,6 +755,18 @@
           </div>
         `;
       }).join('');
+    }
+
+    function saveViewerPlayerName(pIdx) {
+      const input = document.getElementById('viewerPlayerNameInput');
+      if (!input) return;
+      const newName = input.value.trim();
+      if (newName && newName !== gameState.players[pIdx].name) {
+        gameState.players[pIdx].name = newName;
+        saveState();
+        renderApp();
+        showToast(`名前を「${newName}」に変更しました！`);
+      }
     }
 
     // ==========================================
@@ -832,12 +879,33 @@
       renderApp();
     }
 
+    function showToast(message, type = 'success') {
+      let toast = document.getElementById('globalToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'globalToast';
+        document.body.appendChild(toast);
+      }
+      toast.innerText = message;
+      toast.className = `fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl text-white text-xs sm:text-sm font-bold shadow-xl transition-all duration-300 pointer-events-none ${
+        type === 'success' ? 'bg-emerald-600' : 'bg-slate-800'
+      } opacity-100 translate-y-0`;
+
+      clearTimeout(window._toastTimeout);
+      window._toastTimeout = setTimeout(() => {
+        if (toast) {
+          toast.className = toast.className.replace('opacity-100 translate-y-0', 'opacity-0 -translate-y-2');
+        }
+      }, 2500);
+    }
+
     function updatePlayerName(pIdx, newName) {
       const trimmed = newName.trim();
-      if (trimmed) {
+      if (trimmed && trimmed !== gameState.players[pIdx].name) {
         gameState.players[pIdx].name = trimmed;
         saveState();
         renderApp();
+        showToast(`名前を「${trimmed}」に変更しました！`);
       }
     }
 
@@ -889,7 +957,7 @@
       document.getElementById('qrModalIcon').className = 'fa-solid fa-mobile-screen text-emerald-400';
       document.getElementById('qrModalDesc').innerHTML = `
         <strong>【${tableLabel}】${escapeHtml(player.name)}</strong> のスマホで読み取ってください。<br>
-        <span class="text-emerald-600 font-bold">※編集機能のない閲覧専用画面が開きます</span>
+        <span class="text-indigo-600 font-bold">※読み取り後、手元のスマホ画面から名前を自由に変更できます！</span>
       `;
       document.getElementById('qrModalUrl').value = targetUrl;
       document.getElementById('qrModalImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(targetUrl)}`;
