@@ -170,19 +170,43 @@
       </span>
     </div>
 
-    <!-- プレイヤー情報カード -->
-    <div id="playerViewerCard" class="my-6 p-6 rounded-2xl border text-center shadow-lg">
-      <!-- プレイヤー名・ポイント・ゲージがJSで入ります -->
+    <!-- ゲーム終了時の画面 (リセットされてセッションが無効化された場合) -->
+    <div id="playerViewerExpired" class="hidden flex-1 flex flex-col items-center justify-center p-6 text-center my-auto">
+      <div class="w-16 h-16 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-3xl mb-4 shadow-lg">
+        <i class="fa-solid fa-flag-checkered"></i>
+      </div>
+      <h3 class="text-2xl font-black mb-2 text-white">このゲームは終了しました</h3>
+      <p class="text-xs sm:text-sm text-slate-300 mb-6 leading-relaxed max-w-xs mx-auto">
+        ご参加ありがとうございました！<br>
+        ゲームが新しくリセットされたため、この手元画面での同期および名前変更は無効化されました。
+      </p>
+      <div class="p-4 bg-slate-800 rounded-2xl border border-slate-700 max-w-xs w-full text-xs text-slate-300 mx-auto text-left shadow-md">
+        <p class="font-bold text-amber-400 mb-1 flex items-center gap-1.5">
+          <i class="fa-solid fa-qrcode"></i>
+          <span>次の回に参加する場合</span>
+        </p>
+        <p class="text-slate-400 leading-normal">
+          PC画面に新しく表示されているQRコードをスマホのカメラで読み取ってください。
+        </p>
+      </div>
     </div>
 
-    <!-- 全員の順位サマリー -->
-    <div class="p-4 bg-slate-800/80 rounded-2xl border border-slate-700">
-      <h4 class="text-xs font-bold text-slate-400 mb-3 flex items-center gap-1.5">
-        <i class="fa-solid fa-ranking-star text-amber-400"></i>
-        <span>現在のランキング</span>
-      </h4>
-      <div id="playerViewerRanking" class="space-y-2 text-sm">
-        <!-- ランキングがJSで入ります -->
+    <!-- 通常の手元画面コンテンツラッパー -->
+    <div id="playerViewerActiveContent">
+      <!-- プレイヤー情報カード -->
+      <div id="playerViewerCard" class="my-6 p-6 rounded-2xl border text-center shadow-lg">
+        <!-- プレイヤー名・ポイント・ゲージがJSで入ります -->
+      </div>
+
+      <!-- 全員の順位サマリー -->
+      <div class="p-4 bg-slate-800/80 rounded-2xl border border-slate-700">
+        <h4 class="text-xs font-bold text-slate-400 mb-3 flex items-center gap-1.5">
+          <i class="fa-solid fa-ranking-star text-amber-400"></i>
+          <span>現在のランキング</span>
+        </h4>
+        <div id="playerViewerRanking" class="space-y-2 text-sm">
+          <!-- ランキングがJSで入ります -->
+        </div>
       </div>
     </div>
   </div>
@@ -373,6 +397,10 @@
       },
     };
 
+    function generateSessionId() {
+      return 's_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
+    }
+
     // --- 初期状態 (初期値0ポイント、りてらポイントのみ) ---
     const DEFAULT_PLAYERS = [
       { id: 1, name: 'プレイヤー 1', colorKey: '1', litera: 0 },
@@ -382,6 +410,7 @@
     ];
 
     let gameState = {
+      sessionId: generateSessionId(),
       players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),
       maxGauge: 100, // 初期上限
     };
@@ -389,6 +418,7 @@
     // UI状態
     let appMode = 'board'; // 'board' (PCメイン), 'player' (スマホ閲覧), 'master' (スマホ操作)
     let viewerPlayerId = 1; // 'player' モード時の対象プレイヤーID
+    let urlSessionId = null; // スマホURLに含まれるセッションID
     let masterSelectedIdx = 0; // 'master' モードで選択中のプレイヤーインデックス (0〜3)
     
     // PCメイン画面状態
@@ -426,6 +456,9 @@
         try {
           const parsed = JSON.parse(raw);
           if (parsed && Array.isArray(parsed.players) && parsed.players.length === 4) {
+            if (!parsed.sessionId) {
+              parsed.sessionId = generateSessionId();
+            }
             gameState = parsed;
             return;
           }
@@ -433,6 +466,7 @@
       }
       // 初期化またはデータなし時
       gameState = {
+        sessionId: generateSessionId(),
         players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),
         maxGauge: 100,
       };
@@ -675,6 +709,25 @@
         pTableBadge.innerText = getTableDisplayName(roomId);
       }
 
+      // セッション有効性チェック (URLのsidが現在のgameState.sessionIdと異なる場合は終了画面)
+      const isExpired = Boolean(urlSessionId && gameState.sessionId && urlSessionId !== gameState.sessionId);
+      const expiredEl = document.getElementById('playerViewerExpired');
+      const activeEl = document.getElementById('playerViewerActiveContent');
+      const badgeEl = document.getElementById('playerViewerSyncBadge');
+
+      if (isExpired) {
+        if (expiredEl) expiredEl.classList.remove('hidden');
+        if (activeEl) activeEl.classList.add('hidden');
+        if (badgeEl) {
+          badgeEl.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1';
+          badgeEl.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> ゲーム終了';
+        }
+        return;
+      } else {
+        if (expiredEl) expiredEl.classList.add('hidden');
+        if (activeEl) activeEl.classList.remove('hidden');
+      }
+
       const pIdx = Math.max(0, Math.min(viewerPlayerId - 1, 3));
       const player = gameState.players[pIdx];
       const theme = PLAYER_THEMES[player.colorKey || (pIdx + 1)];
@@ -758,6 +811,10 @@
     }
 
     function saveViewerPlayerName(pIdx) {
+      if (urlSessionId && gameState.sessionId && urlSessionId !== gameState.sessionId) {
+        showToast('このゲームは終了しているため名前を変更できません', 'error');
+        return;
+      }
       const input = document.getElementById('viewerPlayerNameInput');
       if (!input) return;
       const newName = input.value.trim();
@@ -929,14 +986,16 @@
 
     function confirmResetAll() {
       const tableLabel = getTableDisplayName(roomId);
-      if (confirm(`【${tableLabel}】の全プレイヤーのりてらポイント(0pt)を初期化しますか？\n※もう片方の卓のデータには影響しません。`)) {
+      if (confirm(`【${tableLabel}】を初期化して、次の新しいゲームを開始しますか？\n\n※前回の参加者のスマホ画面は自動的に終了画面に切り替わり、名前変更や干渉ができなくなります。\n※もう片方の卓のデータには影響しません。`)) {
         gameState = {
+          sessionId: generateSessionId(),
           players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),
           maxGauge: 100,
         };
         saveState();
         activeFocusPlayerIdx = null;
         renderApp();
+        showToast(`【${tableLabel}】新しいゲームを開始しました！`);
       }
     }
 
@@ -950,7 +1009,7 @@
     function openPlayerQrModal(playerId) {
       const pIdx = playerId - 1;
       const player = gameState.players[pIdx];
-      const targetUrl = `${getCleanBaseUrl()}?room=${roomId}&role=player&p=${playerId}`;
+      const targetUrl = `${getCleanBaseUrl()}?room=${roomId}&role=player&p=${playerId}&sid=${gameState.sessionId || ''}`;
       const tableLabel = getTableDisplayName(roomId);
       
       document.getElementById('qrModalTitle').innerText = `【${tableLabel}】${player.name} の閲覧用QR`;
@@ -1072,6 +1131,8 @@
       const room = params.get('room');
       const role = params.get('role');
       const p = params.get('p');
+      const sid = params.get('sid');
+      urlSessionId = sid ? sid.trim() : null;
 
       if (role === 'player') {
         appMode = 'player';
